@@ -5,8 +5,8 @@ import { Employee } from './types';
  * 🚀 LA-Z-BOY IDEA SYSTEM - CONFIGURATION
  */
 
-// Switching to Clearbit logo API which is highly reliable for production web apps
-export const LOGO_URL = 'https://logo.clearbit.com/la-z-boy.com';
+// Your direct link to the white logo on Google Drive
+export const LOGO_URL = 'https://drive.google.com/uc?export=view&id=1GoMTdwYlhG3pEGAv08X8g2oU7iQu6LEJ';
 
 export const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJOKqZPOrdvtrM6-ZymWciDvm-t7ol58ZiNyBFmgmy_u_mLlE_qd9XGCI7ATa64dnuwVNmEVGp3Owd/pub?output=csv';
 
