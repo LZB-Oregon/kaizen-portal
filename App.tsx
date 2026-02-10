@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import HuddleWall from './components/HuddleWall';
 import { AppRoute, KaizenSubmission, Employee } from './types';
-import { LOCATIONS, FALLBACK_EMPLOYEES, SHEET_CSV_URL } from './constants';
+import { LOCATIONS, FALLBACK_EMPLOYEES, SHEET_CSV_URL, LOGO_URL } from './constants';
 import { analyzeKaizenIdea } from './services/geminiService';
 import { 
   ChevronRight, 
@@ -16,17 +16,11 @@ import {
   Target,
   Sparkles,
   Zap,
-  QrCode,
-  UserMinus,
   MapPin
 } from 'lucide-react';
 
-/**
- * Utility to convert Google Drive share links to direct image URLs
- */
 const getDirectDriveUrl = (url: string) => {
   if (!url) return '';
-  // Match standard Google Drive file links
   const driveMatch = url.match(/\/(?:d|file\/d|open\?id=)([\w-]{25,})[?\/]?/);
   if (driveMatch && driveMatch[1]) {
     return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
@@ -42,14 +36,12 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Form State
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [problem, setProblem] = useState('');
   const [impact, setImpact] = useState('');
   const [idea, setIdea] = useState('');
 
-  // Fetch Employees from Google Sheet CSV
   useEffect(() => {
     const fetchEmployees = async () => {
       if (!SHEET_CSV_URL) return;
@@ -59,7 +51,6 @@ const App: React.FC = () => {
         const lines = csvText.split('\n').filter(line => line.trim() !== '');
         
         const parsed: Employee[] = lines.slice(1).map(line => {
-          // Use a basic CSV parser that handles potential quotes
           const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, '').trim());
           return {
             id: values[0],
@@ -68,7 +59,7 @@ const App: React.FC = () => {
             location: values[3],
             photoUrl: getDirectDriveUrl(values[4])
           };
-        }).filter(e => e.id && e.name); // Filter out malformed rows
+        }).filter(e => e.id && e.name);
         
         if (parsed.length > 0) setEmployees(parsed);
       } catch (err) {
@@ -79,7 +70,6 @@ const App: React.FC = () => {
     fetchEmployees();
   }, []);
 
-  // Persist submissions and user identity
   useEffect(() => {
     const savedSubmissions = localStorage.getItem('kaizen_submissions');
     if (savedSubmissions) setSubmissions(JSON.parse(savedSubmissions));
@@ -92,7 +82,7 @@ const App: React.FC = () => {
       if (employee) {
         setSelectedEmployee(employee);
         setSelectedLocation(savedLocation);
-        setStep(3); // Skip Location & Name selection if remembered
+        setStep(3);
       }
     }
   }, [employees]);
@@ -173,18 +163,18 @@ const App: React.FC = () => {
         return (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex items-center gap-2 mb-2">
-              <MapPin className="text-red-600 w-5 h-5" />
-              <h2 className="text-xl font-bold">Select Location</h2>
+              <MapPin className="text-lzb w-5 h-5" />
+              <h2 className="text-xl font-black uppercase tracking-tight">Select Location</h2>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {LOCATIONS.map(loc => (
+              {LOCATIONS.map(loc => (loc &&
                 <button
                   key={loc}
                   onClick={() => handleLocationSelect(loc)}
-                  className={`p-4 rounded-xl border-2 transition-all text-center ${
+                  className={`p-5 rounded-2xl border-2 transition-all text-center uppercase text-xs font-black tracking-widest ${
                     selectedLocation === loc 
-                      ? 'border-indigo-600 bg-indigo-50 font-bold text-indigo-700' 
-                      : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'
+                      ? 'border-lzb bg-lzb text-white shadow-xl scale-[1.02]' 
+                      : 'border-slate-100 bg-white text-slate-500 hover:border-slate-300'
                   }`}
                 >
                   {loc}
@@ -197,37 +187,36 @@ const App: React.FC = () => {
         return (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-2 mb-2">
-              <UserCheck className="text-indigo-600 w-5 h-5" />
-              <h2 className="text-xl font-bold">Who are you?</h2>
+              <UserCheck className="text-lzb w-5 h-5" />
+              <h2 className="text-xl font-black uppercase tracking-tight">Select Your Profile</h2>
             </div>
-            <p className="text-slate-500 text-sm">Team members at {selectedLocation}:</p>
-            <div className="grid grid-cols-1 gap-2 mt-4">
+            <div className="grid grid-cols-1 gap-3 mt-4">
               {filteredEmployees.length > 0 ? filteredEmployees.map(emp => (
                 <button
                   key={emp.id}
                   onClick={() => handleEmployeeSelect(emp)}
-                  className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                  className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
                     selectedEmployee?.id === emp.id 
-                      ? 'border-indigo-600 bg-indigo-50' 
-                      : 'border-slate-100 hover:border-slate-200 bg-white'
+                      ? 'border-lzb bg-lzb text-white shadow-lg' 
+                      : 'border-slate-100 hover:border-slate-300 bg-white'
                   }`}
                 >
                   <img 
                     src={emp.photoUrl || 'https://via.placeholder.com/150'} 
                     alt={emp.name} 
-                    className="w-12 h-12 rounded-full border border-slate-200 object-cover" 
+                    className="w-14 h-14 rounded-xl border border-white/20 object-cover shadow-sm" 
                     onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150'; }}
                   />
                   <div className="text-left">
-                    <p className="font-semibold text-slate-800">{emp.name}</p>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">{emp.department}</p>
+                    <p className={`font-black uppercase tracking-tight ${selectedEmployee?.id === emp.id ? 'text-white' : 'text-slate-900'}`}>{emp.name}</p>
+                    <p className={`text-[10px] uppercase font-black tracking-widest ${selectedEmployee?.id === emp.id ? 'text-white/60' : 'text-slate-500'}`}>{emp.department}</p>
                   </div>
                   {selectedEmployee?.id === emp.id && (
-                    <CheckCircle2 className="ml-auto text-indigo-600 w-6 h-6" />
+                    <CheckCircle2 className="ml-auto text-white w-6 h-6" />
                   )}
                 </button>
               )) : (
-                <p className="text-center py-8 text-slate-400">No staff listed for this location yet.</p>
+                <p className="text-center py-12 text-slate-400 font-bold italic">No personnel profiles found for this location.</p>
               )}
             </div>
           </div>
@@ -236,13 +225,13 @@ const App: React.FC = () => {
         return (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
              <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="text-amber-500 w-5 h-5" />
-              <h2 className="text-xl font-bold">What's the problem?</h2>
+              <AlertTriangle className="text-lzb w-5 h-5" />
+              <h2 className="text-xl font-black uppercase tracking-tight">Describe the Problem</h2>
             </div>
             <textarea
               autoFocus
-              className="w-full h-48 p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all resize-none text-lg"
-              placeholder="Describe the current issue..."
+              className="w-full h-56 p-6 bg-slate-50 border-2 border-slate-200 rounded-3xl focus:ring-8 focus:ring-slate-100 focus:border-lzb transition-all resize-none text-lg font-medium"
+              placeholder="What specifically is causing friction or slowing us down?"
               value={problem}
               onChange={(e) => setProblem(e.target.value)}
             />
@@ -252,13 +241,13 @@ const App: React.FC = () => {
         return (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
              <div className="flex items-center gap-2 mb-2">
-              <Target className="text-red-500 w-5 h-5" />
-              <h2 className="text-xl font-bold">What's the impact?</h2>
+              <Target className="text-lzb w-5 h-5" />
+              <h2 className="text-xl font-black uppercase tracking-tight">What's the Impact?</h2>
             </div>
             <textarea
               autoFocus
-              className="w-full h-48 p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all resize-none text-lg"
-              placeholder="How will solving this help?"
+              className="w-full h-56 p-6 bg-slate-50 border-2 border-slate-200 rounded-3xl focus:ring-8 focus:ring-slate-100 focus:border-lzb transition-all resize-none text-lg font-medium"
+              placeholder="How would fixing this help the team or our customers?"
               value={impact}
               onChange={(e) => setImpact(e.target.value)}
             />
@@ -268,13 +257,13 @@ const App: React.FC = () => {
         return (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
              <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="text-yellow-500 w-5 h-5" />
-              <h2 className="text-xl font-bold">What's your idea?</h2>
+              <Sparkles className="text-lzb w-5 h-5" />
+              <h2 className="text-xl font-black uppercase tracking-tight">Share Your Idea</h2>
             </div>
             <textarea
               autoFocus
-              className="w-full h-48 p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all resize-none text-lg"
-              placeholder="Explain your improvement idea..."
+              className="w-full h-56 p-6 bg-slate-50 border-2 border-slate-200 rounded-3xl focus:ring-8 focus:ring-slate-100 focus:border-lzb transition-all resize-none text-lg font-medium"
+              placeholder="What is your solution or improvement?"
               value={idea}
               onChange={(e) => setIdea(e.target.value)}
             />
@@ -292,22 +281,27 @@ const App: React.FC = () => {
     if (route === AppRoute.QR_GEN) {
       const currentUrl = window.location.href.split('#')[0];
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
-          <div className="bg-white p-8 rounded-3xl shadow-2xl border-4 border-indigo-600 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-2 bg-indigo-600"></div>
-            <div className="mb-6 flex flex-col items-center">
-              <QrCode className="w-16 h-16 text-indigo-600 mb-4" />
-              <h3 className="text-2xl font-black text-indigo-900 italic">COMPANY KAIZEN</h3>
+        <div className="flex flex-col items-center justify-center py-12 text-center space-y-8">
+          <div className="bg-white p-10 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-slate-100 relative overflow-hidden max-w-sm w-full">
+            <div className="absolute top-0 left-0 w-full h-3 bg-lzb"></div>
+            <div className="mb-8 flex flex-col items-center">
+              <div className="mb-4">
+                 <img src={LOGO_URL} alt="La-Z-Boy" className="h-10 w-auto" />
+              </div>
+              <h3 className="text-xl font-black text-lzb uppercase tracking-tight">Idea Station</h3>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mt-1">Scan to Improve</p>
             </div>
-            <img 
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentUrl)}`} 
-              alt="Company QR Code" 
-              className="w-48 h-48 mx-auto border-4 border-slate-50 rounded-xl"
-            />
-            <p className="mt-6 text-sm text-slate-500 font-medium italic">"One Scan, Total Improvement"</p>
+            <div className="p-4 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+               <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentUrl)}`} 
+                alt="System QR" 
+                className="w-48 h-48 mx-auto"
+              />
+            </div>
+            <p className="mt-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">"Empowering Every Team Member"</p>
           </div>
-          <button onClick={() => window.print()} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg flex items-center gap-2">
-            <Zap className="w-5 h-5" /> Print QR for Wall
+          <button onClick={() => window.print()} className="px-8 py-4 bg-lzb text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 no-print">
+            <Zap className="w-5 h-5 text-white" /> Print Station QR
           </button>
         </div>
       );
@@ -316,36 +310,44 @@ const App: React.FC = () => {
     return (
       <div className="relative pt-4">
         {showSuccess ? (
-          <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center text-center p-6 animate-in zoom-in duration-300">
-            <CheckCircle2 className="w-24 h-24 text-green-600 mb-4" />
-            <h2 className="text-3xl font-bold text-slate-800">Idea Logged!</h2>
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mt-6" />
+          <div className="fixed inset-0 bg-lzb z-50 flex flex-col items-center justify-center text-center p-8 animate-in zoom-in duration-500">
+            <div className="bg-white p-6 rounded-full shadow-[0_0_50px_rgba(255,255,255,0.2)] mb-6">
+              <CheckCircle2 className="w-20 h-20 text-lzb" />
+            </div>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2">Submission Received</h2>
+            <p className="text-white/60 font-bold uppercase tracking-[0.2em] text-sm">Reviewing your Idea...</p>
+            <Loader2 className="w-10 h-10 text-white animate-spin mt-12" />
           </div>
         ) : (
           <div className="space-y-6">
             {selectedEmployee && step > 2 && (
-              <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <div className="flex items-center gap-2">
-                  <img src={selectedEmployee.photoUrl} className="w-8 h-8 rounded-full border border-indigo-200 object-cover" />
-                  <span className="text-xs font-bold text-slate-700">{selectedLocation} | {selectedEmployee.name}</span>
+              <div className="flex items-center justify-between bg-lzb p-4 rounded-2xl border border-white/10 shadow-xl">
+                <div className="flex items-center gap-3">
+                  <img src={selectedEmployee.photoUrl} className="w-10 h-10 rounded-xl border-2 border-white/20 object-cover shadow-lg" />
+                  <div>
+                    <span className="text-[10px] font-black text-white/50 uppercase tracking-widest block">{selectedLocation}</span>
+                    <span className="text-sm font-black text-white uppercase tracking-tight">{selectedEmployee.name}</span>
+                  </div>
                 </div>
-                <button onClick={handleLogout} className="text-[10px] uppercase font-bold text-indigo-600 bg-white px-2 py-1 rounded border border-slate-200">
-                  Switch User
+                <button onClick={handleLogout} className="text-[9px] uppercase font-black text-white bg-white/10 px-3 py-2 rounded-xl border border-white/20 hover:bg-white/20 transition-colors">
+                  Reset
                 </button>
               </div>
             )}
 
-            <div className="flex gap-1.5 h-1.5 no-print">
+            <div className="flex gap-2 h-2 no-print">
               {[1, 2, 3, 4, 5].map(s => (
-                <div key={s} className={`flex-1 rounded-full transition-all duration-500 ${step >= s ? 'bg-indigo-600' : 'bg-slate-200'}`} />
+                <div key={s} className={`flex-1 rounded-full transition-all duration-700 ${step >= s ? 'bg-lzb shadow-[0_0_10px_rgba(0,45,76,0.2)]' : 'bg-slate-200'}`} />
               ))}
             </div>
 
-            {renderStep()}
+            <div className="min-h-[300px]">
+              {renderStep()}
+            </div>
 
-            <div className="flex gap-4 pt-4 no-print">
+            <div className="flex gap-4 pt-8 no-print">
               {step > 1 && (
-                <button onClick={prevStep} className="flex-1 py-4 px-6 bg-slate-100 text-slate-600 rounded-2xl font-bold flex items-center justify-center gap-2">
+                <button onClick={prevStep} className="flex-1 py-5 px-6 bg-slate-100 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-200 transition-all">
                   <ChevronLeft className="w-5 h-5" /> Back
                 </button>
               )}
@@ -354,10 +356,10 @@ const App: React.FC = () => {
                 <button
                   disabled={(step === 1 && !selectedLocation) || (step === 2 && !selectedEmployee)}
                   onClick={nextStep}
-                  className={`flex-[2] py-4 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
+                  className={`flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all shadow-xl ${
                     ((step === 1 && !selectedLocation) || (step === 2 && !selectedEmployee)) 
                       ? 'bg-slate-200 text-slate-400' 
-                      : 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
+                      : 'bg-lzb text-white active:scale-95 shadow-lzb/20'
                   }`}
                 >
                   Continue <ChevronRight className="w-5 h-5" />
@@ -366,9 +368,9 @@ const App: React.FC = () => {
                 <button
                   disabled={!idea || isLoading}
                   onClick={handleSubmit}
-                  className="flex-[2] py-4 px-6 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg flex items-center justify-center gap-2 disabled:bg-slate-200"
+                  className="flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-lzb text-white shadow-2xl flex items-center justify-center gap-3 disabled:bg-slate-200 active:scale-95 transition-all"
                 >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Submit Idea <Send className="w-5 h-5" /></>}
+                  {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Submit Idea <Send className="w-6 h-6" /></>}
                 </button>
               )}
             </div>
