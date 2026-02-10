@@ -4,17 +4,25 @@ import { Lightbulb, LayoutGrid, QrCode, Info } from 'lucide-react';
 import { LOGO_URL } from '../constants';
 
 interface LayoutProps {
-  children: React.AnchorHTMLAttributes<HTMLDivElement> | any;
+  children: React.ReactNode;
   activeRoute: string;
-  onNavigate: (route: any) => void;
+  onNavigate: (route: string) => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeRoute, onNavigate }) => {
   const [logoError, setLogoError] = useState(false);
 
+  // Fallback navy color for header in case Tailwind is slow to load
+  const headerStyle = {
+    backgroundColor: '#002d4c',
+  };
+
   return (
-    <div className="min-h-screen flex flex-col max-w-2xl mx-auto bg-white shadow-2xl min-h-screen">
-      <header className="bg-lzb text-white p-6 no-print border-b-4 border-slate-200/10">
+    <div className="min-h-screen flex flex-col max-w-2xl mx-auto bg-white shadow-2xl">
+      <header 
+        style={headerStyle}
+        className="text-white p-6 no-print border-b-4 border-slate-200/10"
+      >
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="bg-white p-2 rounded-lg h-10 min-w-[80px] flex items-center justify-center shadow-md">
@@ -22,11 +30,19 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRoute, onNavigate }) =>
                 <img 
                   src={LOGO_URL} 
                   alt="La-Z-Boy" 
-                  className="h-full w-auto object-contain" 
-                  onError={() => setLogoError(true)}
+                  className="h-full w-auto object-contain block" 
+                  onError={() => {
+                    console.warn("Logo failed to load from:", LOGO_URL);
+                    setLogoError(true);
+                  }}
                 />
               ) : (
-                <span className="text-lzb font-black text-xs tracking-tighter">LA-Z-BOY</span>
+                <span 
+                  style={{ color: '#002d4c' }}
+                  className="font-black text-[10px] tracking-tighter"
+                >
+                  LA-Z-BOY
+                </span>
               )}
             </div>
             <div className="h-8 w-px bg-white/20 hidden sm:block"></div>
@@ -51,7 +67,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRoute, onNavigate }) =>
         {children}
       </main>
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-lzb border-t border-white/10 p-2 flex justify-around no-print shadow-[0_-4px_20px_rgba(0,0,0,0.3)] z-40">
+      <nav 
+        style={headerStyle}
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl border-t border-white/10 p-2 flex justify-around no-print shadow-[0_-4px_20px_rgba(0,0,0,0.3)] z-40"
+      >
         <button 
           onClick={() => onNavigate('submit')}
           className={`flex flex-col items-center p-3 rounded-xl transition-all ${activeRoute === 'submit' ? 'text-white bg-white/10' : 'text-white/40 hover:text-white'}`}
