@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -285,8 +286,12 @@ const App: React.FC = () => {
           <div className="bg-white p-10 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-slate-100 relative overflow-hidden max-w-sm w-full">
             <div className="absolute top-0 left-0 w-full h-3 bg-lzb"></div>
             <div className="mb-8 flex flex-col items-center">
-              <div className="mb-4">
-                 <img src={LOGO_URL} alt="La-Z-Boy" className="h-10 w-auto" />
+              <div className="bg-white p-2 rounded-lg shadow-sm h-12 flex items-center justify-center mb-4 min-w-[100px]">
+                 {!logoError ? (
+                   <img src={LOGO_URL} alt="La-Z-Boy" className="h-full w-auto object-contain" onError={() => setLogoError(true)} />
+                 ) : (
+                   <span className="text-lzb font-black text-xs uppercase tracking-tighter">LA-Z-BOY</span>
+                 )}
               </div>
               <h3 className="text-xl font-black text-lzb uppercase tracking-tight">Idea Station</h3>
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mt-1">Scan to Improve</p>
@@ -323,7 +328,7 @@ const App: React.FC = () => {
             {selectedEmployee && step > 2 && (
               <div className="flex items-center justify-between bg-lzb p-4 rounded-2xl border border-white/10 shadow-xl">
                 <div className="flex items-center gap-3">
-                  <img src={selectedEmployee.photoUrl} className="w-10 h-10 rounded-xl border-2 border-white/20 object-cover shadow-lg" />
+                  <img src={selectedEmployee.photoUrl} className="w-10 h-10 rounded-xl border-2 border-white/20 object-cover shadow-lg" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1454165833767-027ffea9e77b?w=100&h=100&fit=crop'; }} />
                   <div>
                     <span className="text-[10px] font-black text-white/50 uppercase tracking-widest block">{selectedLocation}</span>
                     <span className="text-sm font-black text-white uppercase tracking-tight">{selectedEmployee.name}</span>

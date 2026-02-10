@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { KaizenSubmission } from '../types';
 import { Printer, Calendar, MapPin, Tag } from 'lucide-react';
+import { LOGO_URL } from '../constants';
 
 interface KaizenCardProps {
   submission: KaizenSubmission;
@@ -9,73 +10,94 @@ interface KaizenCardProps {
 }
 
 const KaizenCard: React.FC<KaizenCardProps> = ({ submission, isPrintMode = false }) => {
+  const [logoError, setLogoError] = useState(false);
+  
   const handlePrint = () => {
     window.print();
   };
 
   const cardClasses = isPrintMode 
-    ? "bg-white w-[5.8in] h-[4.1in] p-6 border-4 border-indigo-700 mx-auto overflow-hidden relative"
-    : "bg-white p-6 border-2 border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden";
+    ? "bg-white w-[5.8in] h-[4.1in] p-0 border-4 border-lzb mx-auto overflow-hidden relative shadow-none"
+    : "bg-white p-0 border border-slate-200 rounded-2xl shadow-xl hover:shadow-2xl transition-all relative overflow-hidden mb-6";
 
   return (
     <div className={cardClasses}>
-      <div className="flex justify-between items-start mb-4">
+      {/* Card Header */}
+      <div className="bg-lzb text-white p-4 flex justify-between items-center border-b-4 border-slate-200">
         <div className="flex items-center gap-3">
-          <div className="w-16 h-16 rounded-lg border-2 border-indigo-100 overflow-hidden bg-slate-100">
+          <div className="w-12 h-12 rounded border-2 border-white/30 overflow-hidden bg-white/10 shadow-inner">
             <img 
               src={submission.employeePhoto} 
               alt={submission.employeeName} 
               className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1454165833767-027ffea9e77b?w=100&h=100&fit=crop'; }}
             />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-indigo-900 leading-none">{submission.employeeName}</h3>
-            <div className="flex flex-col gap-0.5 mt-1">
-              <p className="text-[10px] text-slate-500 flex items-center gap-1 font-bold uppercase tracking-wider">
-                <MapPin className="w-2.5 h-2.5 text-red-500" /> {submission.location}
-              </p>
-              <p className="text-[10px] text-slate-400 flex items-center gap-1">
-                <Calendar className="w-2.5 h-2.5" /> {new Date(submission.submittedAt).toLocaleDateString()}
-              </p>
-            </div>
+            <h3 className="font-black text-sm uppercase tracking-tight">{submission.employeeName}</h3>
+            <p className="text-[9px] text-white/60 font-bold uppercase tracking-widest flex items-center gap-1">
+              <MapPin className="w-2.5 h-2.5" /> {submission.location}
+            </p>
           </div>
         </div>
-        <div className="bg-indigo-700 text-white px-3 py-1 text-sm font-black uppercase tracking-widest rounded">
-          KAIZEN
+        <div className="text-right flex flex-col items-end">
+          <div className="bg-white p-1 rounded shadow-sm h-8 min-w-[60px] flex items-center justify-center mb-1">
+            {!logoError ? (
+              <img 
+                src={LOGO_URL} 
+                alt="La-Z-Boy" 
+                className="h-full w-auto object-contain" 
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <span className="text-lzb font-black text-[10px] tracking-tighter px-2">LA-Z-BOY</span>
+            )}
+          </div>
+          <p className="text-[7px] text-white/40 font-bold uppercase tracking-[0.2em] flex items-center justify-end gap-1">
+            <Calendar className="w-2 h-2" /> {new Date(submission.submittedAt).toLocaleDateString()}
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 text-sm">
+      <div className="p-6 grid grid-cols-1 gap-4">
         <section>
-          <h4 className="font-bold text-indigo-700 uppercase text-[10px] tracking-wider border-b border-indigo-100 pb-1 mb-1">The Problem</h4>
-          <p className="text-slate-700 leading-tight italic">"{submission.problem}"</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-lzb"></span>
+            <h4 className="font-black text-slate-900 uppercase text-[9px] tracking-widest">Observed Problem</h4>
+          </div>
+          <p className="text-slate-600 text-xs leading-relaxed italic border-l-2 border-slate-100 pl-3">"{submission.problem}"</p>
         </section>
 
         <section>
-          <h4 className="font-bold text-indigo-700 uppercase text-[10px] tracking-wider border-b border-indigo-100 pb-1 mb-1">Expected Impact</h4>
-          <p className="text-slate-700 leading-tight">{submission.impact}</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+            <h4 className="font-black text-slate-900 uppercase text-[9px] tracking-widest">Potential Impact</h4>
+          </div>
+          <p className="text-slate-600 text-xs leading-relaxed pl-4">{submission.impact}</p>
         </section>
 
-        <section className="bg-indigo-50 p-3 rounded-lg border-l-4 border-indigo-500">
-          <h4 className="font-bold text-indigo-800 uppercase text-[10px] tracking-wider pb-1 mb-1">The Kaizen Idea</h4>
-          <p className="text-indigo-900 font-medium leading-tight">{submission.idea}</p>
+        <section className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <h4 className="font-black text-lzb uppercase text-[9px] tracking-widest mb-1">Proposed Solution</h4>
+          <p className="text-slate-900 font-bold text-sm leading-tight">{submission.idea}</p>
         </section>
       </div>
 
       {submission.wasteType && (
-        <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-yellow-200">
-          <Tag className="w-2.5 h-2.5" />
+        <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-lzb text-white px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border border-white/10">
+          <Tag className="w-2 h-2 text-white/50" />
           Waste: {submission.wasteType}
         </div>
       )}
 
       {!isPrintMode && (
-        <button 
-          onClick={handlePrint}
-          className="mt-4 w-full py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center justify-center gap-2 text-sm font-medium transition-colors no-print"
-        >
-          <Printer className="w-4 h-4" /> Print Card
-        </button>
+        <div className="p-4 pt-0">
+          <button 
+            onClick={handlePrint}
+            className="w-full py-2 bg-lzb text-white rounded-lg hover:opacity-95 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all no-print shadow-lg"
+          >
+            <Printer className="w-4 h-4" /> Print Card
+          </button>
+        </div>
       )}
     </div>
   );
