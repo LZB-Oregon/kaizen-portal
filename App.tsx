@@ -386,7 +386,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeRoute={route} onNavigate={setRoute}>
+    // Fix: Wrap setRoute in a handler that casts the string route to AppRoute enum 
+    // to satisfy the Dispatch<SetStateAction<AppRoute>> type requirement.
+    <Layout activeRoute={route} onNavigate={(r) => setRoute(r as AppRoute)}>
       {renderContent()}
     </Layout>
   );
