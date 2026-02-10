@@ -22,7 +22,7 @@ const KaizenCard: React.FC<KaizenCardProps> = ({ submission, isPrintMode = false
 
   return (
     <div className={cardClasses}>
-      {/* Card Header */}
+      {/* Card Header - Navy Background */}
       <div className="bg-lzb text-white p-4 flex justify-between items-center border-b-4 border-slate-200">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded border-2 border-white/30 overflow-hidden bg-white/10 shadow-inner">
@@ -41,7 +41,7 @@ const KaizenCard: React.FC<KaizenCardProps> = ({ submission, isPrintMode = false
           </div>
         </div>
         <div className="text-right flex flex-col items-end">
-          <div className="bg-white p-1 rounded shadow-sm h-8 min-w-[60px] flex items-center justify-center mb-1">
+          <div className="h-8 min-w-[60px] flex items-center justify-center mb-1">
             {!logoError ? (
               <img 
                 src={LOGO_URL} 
@@ -50,7 +50,7 @@ const KaizenCard: React.FC<KaizenCardProps> = ({ submission, isPrintMode = false
                 onError={() => setLogoError(true)}
               />
             ) : (
-              <span className="text-lzb font-black text-[10px] tracking-tighter px-2">LA-Z-BOY</span>
+              <span className="text-white font-black text-[12px] tracking-tighter uppercase px-2">LA-Z-BOY</span>
             )}
           </div>
           <p className="text-[7px] text-white/40 font-bold uppercase tracking-[0.2em] flex items-center justify-end gap-1">

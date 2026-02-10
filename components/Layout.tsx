@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lightbulb, LayoutGrid, QrCode, Info } from 'lucide-react';
 import { LOGO_URL } from '../constants';
 
@@ -11,8 +11,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeRoute, onNavigate }) => {
   const [logoError, setLogoError] = useState(false);
-
-  // Fallback navy color for header in case Tailwind is slow to load
+  
   const headerStyle = {
     backgroundColor: '#002d4c',
   };
@@ -25,24 +24,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRoute, onNavigate }) =>
       >
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <div className="bg-white p-2 rounded-lg h-10 min-w-[80px] flex items-center justify-center shadow-md">
+            <div className="h-10 min-w-[100px] flex items-center justify-start">
               {!logoError ? (
                 <img 
                   src={LOGO_URL} 
                   alt="La-Z-Boy" 
-                  className="h-full w-auto object-contain block" 
+                  className="h-full w-auto object-contain block transition-opacity duration-500" 
                   onError={() => {
-                    console.warn("Logo failed to load from:", LOGO_URL);
+                    console.warn("Logo failed to load. Check Drive sharing settings.");
                     setLogoError(true);
                   }}
                 />
               ) : (
-                <span 
-                  style={{ color: '#002d4c' }}
-                  className="font-black text-[10px] tracking-tighter"
-                >
-                  LA-Z-BOY
-                </span>
+                <div className="flex flex-col">
+                   <span className="font-black text-lg tracking-tighter leading-none text-white">LA-Z-BOY</span>
+                </div>
               )}
             </div>
             <div className="h-8 w-px bg-white/20 hidden sm:block"></div>
@@ -53,7 +49,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRoute, onNavigate }) =>
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => alert("Admin Panel:\n1. Update employees in Google Sheets.\n2. Print the Master QR code for your floor.\n3. Display 'The Wall' on team monitors.")}
+              onClick={() => alert("Admin Tip: Ensure your logo in Google Drive is shared with 'Anyone with the link' or it won't appear here.")}
               className="p-2 hover:bg-white/10 rounded-full transition-colors"
               title="System Info"
             >
