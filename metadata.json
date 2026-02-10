@@ -1,0 +1,7 @@
+{
+  "name": "Kaizen Idea Portal",
+  "description": "A streamlined mobile-first application for employees to submit Kaizen improvement ideas, generate printable cards with photos, and visualize them on a digital huddle wall.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
