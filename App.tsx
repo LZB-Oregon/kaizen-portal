@@ -23,7 +23,7 @@ const getDirectDriveUrl = (url: string) => {
   if (!url) return '';
   const driveMatch = url.match(/\/(?:d|file\/d|open\?id=)([\w-]{25,})[?\/]?/);
   if (driveMatch && driveMatch[1]) {
-    return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+    return `https://drive.google.com/uc?id=${driveMatch[1]}`;
   }
   return url;
 };
@@ -36,6 +36,8 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [logoError, setLogoError] = useState(false);
+
+  const isPlaceholderLogo = LOGO_URL.includes('PASTE_YOUR_ID_HERE');
 
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -286,11 +288,11 @@ const App: React.FC = () => {
           <div className="bg-white p-10 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-slate-100 relative overflow-hidden max-w-sm w-full">
             <div className="absolute top-0 left-0 w-full h-3 bg-lzb"></div>
             <div className="mb-8 flex flex-col items-center">
-              <div className="bg-white p-2 rounded-lg shadow-sm h-12 flex items-center justify-center mb-4 min-w-[100px]">
-                 {!logoError ? (
+              <div className="bg-lzb p-3 rounded-2xl shadow-sm h-14 flex items-center justify-center mb-4 min-w-[120px]">
+                 {!logoError && !isPlaceholderLogo ? (
                    <img src={LOGO_URL} alt="La-Z-Boy" className="h-full w-auto object-contain" onError={() => setLogoError(true)} />
                  ) : (
-                   <span className="text-lzb font-black text-xs uppercase tracking-tighter">LA-Z-BOY</span>
+                   <span className="text-white font-black text-lg uppercase tracking-tighter">LA-Z-BOY</span>
                  )}
               </div>
               <h3 className="text-xl font-black text-lzb uppercase tracking-tight">Idea Station</h3>
@@ -342,7 +344,7 @@ const App: React.FC = () => {
 
             <div className="flex gap-2 h-2 no-print">
               {[1, 2, 3, 4, 5].map(s => (
-                <div key={s} className={`flex-1 rounded-full transition-all duration-700 ${step >= s ? 'bg-lzb shadow-[0_0_10px_rgba(0,45,76,0.2)]' : 'bg-slate-200'}`} />
+                <div key={s} className={`flex-1 rounded-full transition-all duration-700 ${step >= s ? 'bg-lzb shadow-lg' : 'bg-slate-200'}`} />
               ))}
             </div>
 
@@ -363,8 +365,8 @@ const App: React.FC = () => {
                   onClick={nextStep}
                   className={`flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all shadow-xl ${
                     ((step === 1 && !selectedLocation) || (step === 2 && !selectedEmployee)) 
-                      ? 'bg-slate-200 text-slate-400' 
-                      : 'bg-lzb text-white active:scale-95 shadow-lzb/20'
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' 
+                      : 'bg-lzb text-white active:scale-95 shadow-lzb/20 hover:bg-lzb/90'
                   }`}
                 >
                   Continue <ChevronRight className="w-5 h-5" />
@@ -373,7 +375,7 @@ const App: React.FC = () => {
                 <button
                   disabled={!idea || isLoading}
                   onClick={handleSubmit}
-                  className="flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-lzb text-white shadow-2xl flex items-center justify-center gap-3 disabled:bg-slate-200 active:scale-95 transition-all"
+                  className="flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-lzb text-white shadow-2xl flex items-center justify-center gap-3 disabled:bg-slate-200 disabled:text-slate-400 disabled:opacity-50 active:scale-95 transition-all hover:bg-lzb/90"
                 >
                   {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Submit Idea <Send className="w-6 h-6" /></>}
                 </button>
@@ -386,8 +388,6 @@ const App: React.FC = () => {
   };
 
   return (
-    // Fix: Wrap setRoute in a handler that casts the string route to AppRoute enum 
-    // to satisfy the Dispatch<SetStateAction<AppRoute>> type requirement.
     <Layout activeRoute={route} onNavigate={(r) => setRoute(r as AppRoute)}>
       {renderContent()}
     </Layout>
