@@ -19,7 +19,7 @@ export const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ
  * 4. Change "Web page" to "Comma-separated values (.csv)".
  * 5. Click Publish and copy that link here.
  */
-export const SUBMISSIONS_READ_URL = 'https://docs.google.com/spreadsheets/d/1x4HTctUsmsfTl-_wVMCT92g2GgDxk2sJLr8YE31HU8U/edit?usp=sharing;
+export const SUBMISSIONS_READ_URL = ''; 
 
 // WRITE: Google Apps Script Web App URL
 export const SUBMISSIONS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8OuAzK7KHu-hnA3KOuHtVvaLkPRHkP9VOxX7YC0lf0gaPZsvLFGaFjulJX4KRec8T/exec'; 
