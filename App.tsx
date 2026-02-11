@@ -37,7 +37,7 @@ const getDirectDriveUrl = (url: string) => {
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(AppRoute.SUBMIT);
   const [submissions, setSubmissions] = useState<KaizenSubmission[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>(FALLBACK_EMPLOYEES);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -53,7 +53,9 @@ const App: React.FC = () => {
   // 1. Fetch Employees & Global Submissions
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch Employees
+      let currentEmployees: Employee[] = FALLBACK_EMPLOYEES;
+
+      // Fetch Employees first
       if (SHEET_CSV_URL) {
         try {
           const response = await fetch(SHEET_CSV_URL);
@@ -69,9 +71,13 @@ const App: React.FC = () => {
               photoUrl: getDirectDriveUrl(values[4])
             };
           }).filter(e => e.id && e.name);
-          if (parsed.length > 0) setEmployees(parsed);
+          if (parsed.length > 0) {
+            currentEmployees = parsed;
+            setEmployees(parsed);
+          }
         } catch (err) {
           console.error("Failed to fetch Employee data", err);
+          setEmployees(FALLBACK_EMPLOYEES);
         }
       }
 
@@ -83,22 +89,24 @@ const App: React.FC = () => {
           const lines = csvText.split('\n').filter(line => line.trim() !== '');
           const parsed: KaizenSubmission[] = lines.slice(1).map(line => {
             const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, '').trim());
+            const empId = values[4];
+            const empProfile = currentEmployees.find(e => e.id === empId);
+            
             return {
               id: values[0],
               submittedAt: values[1],
               location: values[2],
               employeeName: values[3],
-              employeeId: values[4],
+              employeeId: empId,
               problem: values[5],
               idea: values[6],
               wasteType: values[7] as any,
               aiAnalysis: values[8],
-              employeePhoto: '', // We would ideally lookup the photo from employee list
-              impact: 'Improvement'
+              employeePhoto: empProfile?.photoUrl || '', // Map photo from registry
+              impact: 'Improvement project'
             };
           });
           
-          // Merge with Local Submissions to avoid duplicates and show latest
           const local = JSON.parse(localStorage.getItem('kaizen_submissions') || '[]');
           const merged = [...parsed, ...local].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
           setSubmissions(merged);
@@ -132,7 +140,7 @@ const App: React.FC = () => {
     const savedUser = localStorage.getItem('kaizen_user_id');
     const savedLocation = localStorage.getItem('kaizen_location');
     const params = new URLSearchParams(window.location.search);
-    if (!params.get('loc') && savedUser && savedLocation && employees.length > 1) {
+    if (!params.get('loc') && savedUser && savedLocation && employees.length > 0) {
       const employee = employees.find(e => e.id === savedUser);
       if (employee) {
         setSelectedEmployee(employee);
@@ -191,10 +199,9 @@ const App: React.FC = () => {
     // 1. Post to Google Sheet Script (Async)
     if (SUBMISSIONS_SCRIPT_URL) {
       try {
-        // Send a simple POST request to the Apps Script Web App
         fetch(SUBMISSIONS_SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors', // Use no-cors for simple Google Apps Script redirects
+          mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newSubmission)
         }).catch(err => console.error("Sheet Sync Error:", err));
