@@ -22,7 +22,7 @@ export const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ
 export const SUBMISSIONS_READ_URL = ''; 
 
 // WRITE: Google Apps Script Web App URL
-export const SUBMISSIONS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8OuAzK7KHu-hnA3KOuHtVvaLkPRHkP9VOxX7YC0lf0gaPZsvLFGaFjulJX4KRec8T/exec'; 
+export const SUBMISSIONS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx546CTd7Wbr66VN8WA3eeq910tVompR06dAIyUVqGC_-awzVNLvSgbzqN8C5I3RLwh3A/exec'; 
 
 export const LOCATIONS = [
   "Prep and Receiving", "Main Office HQ", "Delta Park", "Tualatin",

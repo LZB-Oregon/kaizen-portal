@@ -25,6 +25,40 @@ import {
   Lightbulb
 } from 'lucide-react';
 
+/* 
+  COPY & PASTE THIS INTO YOUR GOOGLE APPS SCRIPT (Extensions > Apps Script):
+  
+  function doPost(e) {
+    try {
+      var data = JSON.parse(e.postData.contents);
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName("Submissions");
+      
+      // If sheet "Submissions" doesn't exist, create it or use first sheet
+      if (!sheet) {
+        sheet = ss.getSheets()[0];
+      }
+      
+      // Append data in order: ID, Time, Location, Name, EmpID, Problem, Idea, Waste, Analysis
+      sheet.appendRow([
+        data.id,
+        data.submittedAt,
+        data.location,
+        data.employeeName,
+        data.employeeId,
+        data.problem,
+        data.idea,
+        data.wasteType,
+        data.aiAnalysis
+      ]);
+      
+      return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+    } catch (err) {
+      return ContentService.createTextOutput("Error: " + err.message).setMimeType(ContentService.MimeType.TEXT);
+    }
+  }
+*/
+
 const getDirectDriveUrl = (url: string) => {
   if (!url) return '';
   const driveMatch = url.match(/\/(?:d|file\/d|open\?id=)([\w-]{25,})[?\/]?/);
@@ -196,21 +230,27 @@ const App: React.FC = () => {
       submittedAt: new Date().toISOString()
     };
 
-    // 1. Post to Google Sheet Script (Async)
+    // 1. Post to Google Sheet Script
+    // NOTE: We use mode: 'no-cors' and OMIT the Content-Type header to bypass CORS preflight checks.
+    // Google Apps Script doesn't handle OPTIONS preflight, so sending it as plain text/simple request is required.
     if (SUBMISSIONS_SCRIPT_URL) {
+      console.log("Posting to script:", SUBMISSIONS_SCRIPT_URL);
       try {
         fetch(SUBMISSIONS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newSubmission)
-        }).catch(err => console.error("Sheet Sync Error:", err));
+        })
+        .then(() => console.log("Post request sent to Apps Script."))
+        .catch(err => console.error("Sheet Sync Error:", err));
       } catch (e) {
-        console.error("Sheet post error", e);
+        console.error("Sheet fetch exception", e);
       }
+    } else {
+      console.warn("No SUBMISSIONS_SCRIPT_URL defined in constants.ts");
     }
 
-    // 2. Update Local State & Storage immediately
+    // 2. Update Local State & Storage immediately (Optimistic UI)
     setLatestSubmission(newSubmission);
     const updated = [newSubmission, ...submissions];
     saveSubmissions(updated);
