@@ -17,7 +17,7 @@ export const SUBMISSIONS_READ_URL = '';
 
 // WRITE: Google Apps Script Web App URL
 // REPLACE THIS with your deployed Apps Script URL
-export const SUBMISSIONS_SCRIPT_URL = ''; 
+export const SUBMISSIONS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8OuAzK7KHu-hnA3KOuHtVvaLkPRHkP9VOxX7YC0lf0gaPZsvLFGaFjulJX4KRec8T/exec'; 
 
 export const LOCATIONS = [
   "Prep and Receiving", "Main Office HQ", "Delta Park", "Tualatin",
