@@ -4,7 +4,7 @@ import Layout from './components/Layout';
 import HuddleWall from './components/HuddleWall';
 import KaizenCard from './components/KaizenCard';
 import { AppRoute, KaizenSubmission, Employee } from './types';
-import { LOCATIONS, FALLBACK_EMPLOYEES, SHEET_CSV_URL, LOGO_URL } from './constants';
+import { LOCATIONS, FALLBACK_EMPLOYEES, SHEET_CSV_URL, LOGO_URL, SUBMISSIONS_SCRIPT_URL, SUBMISSIONS_READ_URL } from './constants';
 import { analyzeKaizenIdea } from './services/geminiService';
 import { 
   ChevronRight, 
@@ -44,15 +44,79 @@ const App: React.FC = () => {
   const [logoError, setLogoError] = useState(false);
   const [latestSubmission, setLatestSubmission] = useState<KaizenSubmission | null>(null);
 
-  // QR Generation State
   const [qrLocation, setQrLocation] = useState<string>("");
-
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [problem, setProblem] = useState('');
   const [idea, setIdea] = useState('');
 
-  // Handle URL Parameters (Auto-location detection)
+  // 1. Fetch Employees & Global Submissions
+  useEffect(() => {
+    const fetchData = async () => {
+      // Fetch Employees
+      if (SHEET_CSV_URL) {
+        try {
+          const response = await fetch(SHEET_CSV_URL);
+          const csvText = await response.text();
+          const lines = csvText.split('\n').filter(line => line.trim() !== '');
+          const parsed: Employee[] = lines.slice(1).map(line => {
+            const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, '').trim());
+            return {
+              id: values[0],
+              name: values[1],
+              department: values[2],
+              location: values[3],
+              photoUrl: getDirectDriveUrl(values[4])
+            };
+          }).filter(e => e.id && e.name);
+          if (parsed.length > 0) setEmployees(parsed);
+        } catch (err) {
+          console.error("Failed to fetch Employee data", err);
+        }
+      }
+
+      // Fetch Global Submissions
+      if (SUBMISSIONS_READ_URL) {
+        try {
+          const response = await fetch(SUBMISSIONS_READ_URL);
+          const csvText = await response.text();
+          const lines = csvText.split('\n').filter(line => line.trim() !== '');
+          const parsed: KaizenSubmission[] = lines.slice(1).map(line => {
+            const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, '').trim());
+            return {
+              id: values[0],
+              submittedAt: values[1],
+              location: values[2],
+              employeeName: values[3],
+              employeeId: values[4],
+              problem: values[5],
+              idea: values[6],
+              wasteType: values[7] as any,
+              aiAnalysis: values[8],
+              employeePhoto: '', // We would ideally lookup the photo from employee list
+              impact: 'Improvement'
+            };
+          });
+          
+          // Merge with Local Submissions to avoid duplicates and show latest
+          const local = JSON.parse(localStorage.getItem('kaizen_submissions') || '[]');
+          const merged = [...parsed, ...local].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+          setSubmissions(merged);
+        } catch (err) {
+          console.error("Failed to fetch Global Submissions", err);
+          const saved = localStorage.getItem('kaizen_submissions');
+          if (saved) setSubmissions(JSON.parse(saved));
+        }
+      } else {
+        const saved = localStorage.getItem('kaizen_submissions');
+        if (saved) setSubmissions(JSON.parse(saved));
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Handle URL Parameters
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const locParam = params.get('loc');
@@ -63,51 +127,17 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Auto-login logic
   useEffect(() => {
-    const fetchEmployees = async () => {
-      if (!SHEET_CSV_URL) return;
-      try {
-        const response = await fetch(SHEET_CSV_URL);
-        const csvText = await response.text();
-        const lines = csvText.split('\n').filter(line => line.trim() !== '');
-        
-        const parsed: Employee[] = lines.slice(1).map(line => {
-          const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, '').trim());
-          return {
-            id: values[0],
-            name: values[1],
-            department: values[2],
-            location: values[3],
-            photoUrl: getDirectDriveUrl(values[4])
-          };
-        }).filter(e => e.id && e.name);
-        
-        if (parsed.length > 0) setEmployees(parsed);
-      } catch (err) {
-        console.error("Failed to fetch Google Sheet data, using fallbacks.", err);
-      }
-    };
-
-    fetchEmployees();
-  }, []);
-
-  useEffect(() => {
-    const savedSubmissions = localStorage.getItem('kaizen_submissions');
-    if (savedSubmissions) setSubmissions(JSON.parse(savedSubmissions));
-
     const savedUser = localStorage.getItem('kaizen_user_id');
     const savedLocation = localStorage.getItem('kaizen_location');
-    
-    // Only auto-load user if a location hasn't been forced by URL
     const params = new URLSearchParams(window.location.search);
-    if (!params.get('loc')) {
-      if (savedUser && savedLocation) {
-        const employee = employees.find(e => e.id === savedUser);
-        if (employee) {
-          setSelectedEmployee(employee);
-          setSelectedLocation(savedLocation);
-          setStep(3);
-        }
+    if (!params.get('loc') && savedUser && savedLocation && employees.length > 1) {
+      const employee = employees.find(e => e.id === savedUser);
+      if (employee) {
+        setSelectedEmployee(employee);
+        setSelectedLocation(savedLocation);
+        setStep(3);
       }
     }
   }, [employees]);
@@ -151,13 +181,29 @@ const App: React.FC = () => {
       employeeName: selectedEmployee.name,
       employeePhoto: selectedEmployee.photoUrl,
       problem,
-      impact: "Improvement project", // Default text since field was removed
+      impact: "Improvement project",
       idea,
       wasteType: analysis?.wasteType,
       aiAnalysis: analysis?.shortAnalysis,
       submittedAt: new Date().toISOString()
     };
 
+    // 1. Post to Google Sheet Script (Async)
+    if (SUBMISSIONS_SCRIPT_URL) {
+      try {
+        // Send a simple POST request to the Apps Script Web App
+        fetch(SUBMISSIONS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors', // Use no-cors for simple Google Apps Script redirects
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newSubmission)
+        }).catch(err => console.error("Sheet Sync Error:", err));
+      } catch (e) {
+        console.error("Sheet post error", e);
+      }
+    }
+
+    // 2. Update Local State & Storage immediately
     setLatestSubmission(newSubmission);
     const updated = [newSubmission, ...submissions];
     saveSubmissions(updated);

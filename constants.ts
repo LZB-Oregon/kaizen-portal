@@ -5,10 +5,19 @@ import { Employee } from './types';
  * 🚀 LA-Z-BOY IDEA SYSTEM - CONFIGURATION
  */
 
-// Using a PNG thumbnail of the SVG for better cross-browser compatibility and reliability
-export const LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/La-Z-Boy_logo.svg/512px-La-Z-Boy_logo.svg.png';
+// Your direct link to the white logo on Google Drive
+export const LOGO_URL = 'https://drive.google.com/uc?export=view&id=1GoMTdwYlhG3pEGAv08X8g2oU7iQu6LEJ';
 
+// READ: Google Sheet CSV for Employees
 export const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJOKqZPOrdvtrM6-ZymWciDvm-t7ol58ZiNyBFmgmy_u_mLlE_qd9XGCI7ATa64dnuwVNmEVGp3Owd/pub?output=csv';
+
+// READ: Google Sheet CSV for Submissions (Publish the 'Submissions' tab as CSV)
+// REPLACE THIS with your published Submissions CSV URL
+export const SUBMISSIONS_READ_URL = ''; 
+
+// WRITE: Google Apps Script Web App URL
+// REPLACE THIS with your deployed Apps Script URL
+export const SUBMISSIONS_SCRIPT_URL = ''; 
 
 export const LOCATIONS = [
   "Prep and Receiving", "Main Office HQ", "Delta Park", "Tualatin",
