@@ -16,7 +16,10 @@ import {
   Target,
   Sparkles,
   Zap,
-  MapPin
+  MapPin,
+  QrCode,
+  Printer,
+  ChevronDown
 } from 'lucide-react';
 
 const getDirectDriveUrl = (url: string) => {
@@ -37,6 +40,9 @@ const App: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
+  // QR Generation State
+  const [qrLocation, setQrLocation] = useState<string>("");
+
   const isPlaceholderLogo = LOGO_URL.includes('PASTE_YOUR_ID_HERE');
 
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
@@ -44,6 +50,17 @@ const App: React.FC = () => {
   const [problem, setProblem] = useState('');
   const [impact, setImpact] = useState('');
   const [idea, setIdea] = useState('');
+
+  // Handle URL Parameters (Auto-location detection)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const locParam = params.get('loc');
+    if (locParam && LOCATIONS.includes(locParam)) {
+      setSelectedLocation(locParam);
+      localStorage.setItem('kaizen_location', locParam);
+      setStep(2);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -80,12 +97,16 @@ const App: React.FC = () => {
     const savedUser = localStorage.getItem('kaizen_user_id');
     const savedLocation = localStorage.getItem('kaizen_location');
     
-    if (savedUser && savedLocation) {
-      const employee = employees.find(e => e.id === savedUser);
-      if (employee) {
-        setSelectedEmployee(employee);
-        setSelectedLocation(savedLocation);
-        setStep(3);
+    // Only auto-load user if a location hasn't been forced by URL
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('loc')) {
+      if (savedUser && savedLocation) {
+        const employee = employees.find(e => e.id === savedUser);
+        if (employee) {
+          setSelectedEmployee(employee);
+          setSelectedLocation(savedLocation);
+          setStep(3);
+        }
       }
     }
   }, [employees]);
@@ -113,6 +134,8 @@ const App: React.FC = () => {
     setSelectedEmployee(null);
     setSelectedLocation(null);
     setStep(1);
+    // Clear URL params
+    window.history.replaceState({}, document.title, window.location.pathname);
   };
 
   const handleSubmit = async () => {
@@ -219,7 +242,10 @@ const App: React.FC = () => {
                   )}
                 </button>
               )) : (
-                <p className="text-center py-12 text-slate-400 font-bold italic">No personnel profiles found for this location.</p>
+                <div className="text-center py-12">
+                   <p className="text-slate-400 font-bold italic mb-4">No personnel profiles found for {selectedLocation}.</p>
+                   <button onClick={() => setStep(1)} className="text-lzb font-black uppercase text-xs tracking-widest underline">Change Location</button>
+                </div>
               )}
             </div>
           </div>
@@ -282,33 +308,82 @@ const App: React.FC = () => {
     }
 
     if (route === AppRoute.QR_GEN) {
-      const currentUrl = window.location.href.split('#')[0];
+      const baseUrl = window.location.origin + window.location.pathname;
+      const qrUrl = qrLocation ? `${baseUrl}?loc=${encodeURIComponent(qrLocation)}` : baseUrl;
+      
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-center space-y-8">
-          <div className="bg-white p-10 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-slate-100 relative overflow-hidden max-w-sm w-full">
-            <div className="absolute top-0 left-0 w-full h-3 bg-lzb"></div>
-            <div className="mb-8 flex flex-col items-center">
-              <div className="bg-lzb p-3 rounded-2xl shadow-sm h-14 flex items-center justify-center mb-4 min-w-[120px]">
-                 {!logoError && !isPlaceholderLogo ? (
+        <div className="flex flex-col items-center justify-center py-4 text-center space-y-6 animate-in fade-in duration-500 pb-20">
+          <div className="w-full max-w-sm space-y-4 no-print">
+            <div className="bg-slate-100 p-4 rounded-2xl border border-slate-200">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Station Configuration</p>
+              <div className="relative">
+                <select 
+                  className="w-full p-4 bg-white rounded-xl border-2 border-slate-200 font-bold text-sm appearance-none focus:border-lzb focus:ring-4 focus:ring-lzb/5 transition-all outline-none pr-10"
+                  value={qrLocation}
+                  onChange={(e) => setQrLocation(e.target.value)}
+                >
+                  <option value="">All Locations (General)</option>
+                  {LOCATIONS.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+              </div>
+              <p className="text-[9px] text-slate-400 mt-2 font-medium">Selecting a location will pre-configure the app for employees at that station.</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-8 sm:p-12 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border-2 border-slate-100 relative overflow-hidden max-w-sm w-full print:border-lzb print:shadow-none print:max-w-none print:w-full print:h-[10in] print:p-16">
+            <div className="absolute top-0 left-0 w-full h-6 bg-lzb"></div>
+            
+            <div className="mb-10 flex flex-col items-center">
+              <div className="bg-lzb p-4 rounded-2xl shadow-lg h-20 flex items-center justify-center mb-6 min-w-[140px] print:h-24">
+                 {!logoError ? (
                    <img src={LOGO_URL} alt="La-Z-Boy" className="h-full w-auto object-contain" onError={() => setLogoError(true)} />
                  ) : (
-                   <span className="text-white font-black text-lg uppercase tracking-tighter">LA-Z-BOY</span>
+                   <span className="text-white font-black text-2xl uppercase tracking-tighter">LA-Z-BOY</span>
                  )}
               </div>
-              <h3 className="text-xl font-black text-lzb uppercase tracking-tight">Idea Station</h3>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mt-1">Scan to Improve</p>
+              <h3 className="text-3xl font-black text-lzb uppercase tracking-tighter print:text-5xl">IDEA STATION</h3>
+              {qrLocation && (
+                <p className="text-lzb font-black uppercase text-sm tracking-widest mt-2 bg-lzb/5 px-4 py-1 rounded-full print:text-2xl print:mt-6 print:px-8 print:py-4">{qrLocation}</p>
+              )}
+              <div className="flex items-center gap-2 mt-2 bg-slate-50 px-4 py-1 rounded-full border border-slate-100 print:mt-8 print:px-8 print:py-4">
+                <QrCode className="w-4 h-4 text-lzb print:w-8 print:h-8" />
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 print:text-xl">Scan to Improve</p>
+              </div>
             </div>
-            <div className="p-4 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+
+            <div className="p-6 bg-white rounded-[2rem] border-4 border-lzb relative shadow-inner inline-block mx-auto print:p-12 print:border-8">
                <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentUrl)}`} 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrUrl)}`} 
                 alt="System QR" 
-                className="w-48 h-48 mx-auto"
+                className="w-48 h-48 mx-auto print:w-96 print:h-96"
               />
             </div>
-            <p className="mt-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">"Empowering Every Team Member"</p>
+
+            <div className="mt-10 space-y-4">
+              <p className="text-slate-900 font-bold text-lg print:text-3xl">Scan with your phone camera</p>
+              <div className="flex justify-center gap-6 print:mt-12">
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center print:w-12 print:h-12"><Zap className="w-4 h-4 text-lzb print:w-6 print:h-6" /></div>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 print:text-sm">Instant</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center print:w-12 print:h-12"><UserCheck className="w-4 h-4 text-lzb print:w-6 print:h-6" /></div>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 print:text-sm">Verified</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center print:w-12 print:h-12"><Sparkles className="w-4 h-4 text-lzb print:w-6 print:h-6" /></div>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 print:text-sm">Continuous</span>
+                </div>
+              </div>
+              <p className="mt-8 text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em] italic print:text-lg print:mt-24">"Empowering Every Team Member"</p>
+            </div>
           </div>
-          <button onClick={() => window.print()} className="px-8 py-4 bg-lzb text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 no-print">
-            <Zap className="w-5 h-5 text-white" /> Print Station QR
+
+          <button onClick={() => window.print()} className="px-10 py-5 bg-lzb text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-all hover:scale-105 hover:bg-lzb/90 active:scale-95 no-print">
+            <Printer className="w-5 h-5 text-white" /> Print Station Sign
           </button>
         </div>
       );
