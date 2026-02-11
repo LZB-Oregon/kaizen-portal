@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import HuddleWall from './components/HuddleWall';
+import KaizenCard from './components/KaizenCard';
 import { AppRoute, KaizenSubmission, Employee } from './types';
 import { LOCATIONS, FALLBACK_EMPLOYEES, SHEET_CSV_URL, LOGO_URL } from './constants';
 import { analyzeKaizenIdea } from './services/geminiService';
@@ -19,7 +20,9 @@ import {
   MapPin,
   QrCode,
   Printer,
-  ChevronDown
+  ChevronDown,
+  Tag,
+  Lightbulb
 } from 'lucide-react';
 
 const getDirectDriveUrl = (url: string) => {
@@ -39,16 +42,14 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [logoError, setLogoError] = useState(false);
+  const [latestSubmission, setLatestSubmission] = useState<KaizenSubmission | null>(null);
 
   // QR Generation State
   const [qrLocation, setQrLocation] = useState<string>("");
 
-  const isPlaceholderLogo = LOGO_URL.includes('PASTE_YOUR_ID_HERE');
-
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [problem, setProblem] = useState('');
-  const [impact, setImpact] = useState('');
   const [idea, setIdea] = useState('');
 
   // Handle URL Parameters (Auto-location detection)
@@ -134,12 +135,11 @@ const App: React.FC = () => {
     setSelectedEmployee(null);
     setSelectedLocation(null);
     setStep(1);
-    // Clear URL params
     window.history.replaceState({}, document.title, window.location.pathname);
   };
 
   const handleSubmit = async () => {
-    if (!selectedEmployee || !problem || !impact || !idea || !selectedLocation) return;
+    if (!selectedEmployee || !problem || !idea || !selectedLocation) return;
 
     setIsLoading(true);
     const analysis = await analyzeKaizenIdea(problem, idea);
@@ -151,34 +151,31 @@ const App: React.FC = () => {
       employeeName: selectedEmployee.name,
       employeePhoto: selectedEmployee.photoUrl,
       problem,
-      impact,
+      impact: "Improvement project", // Default text since field was removed
       idea,
       wasteType: analysis?.wasteType,
       aiAnalysis: analysis?.shortAnalysis,
       submittedAt: new Date().toISOString()
     };
 
+    setLatestSubmission(newSubmission);
     const updated = [newSubmission, ...submissions];
     saveSubmissions(updated);
     
     setIsLoading(false);
     setShowSuccess(true);
-    
-    setTimeout(() => {
-      resetForm();
-      setRoute(AppRoute.HUDDLE_WALL);
-    }, 2000);
   };
 
   const resetForm = () => {
     setStep(selectedEmployee ? 3 : 1);
     setProblem('');
-    setImpact('');
     setIdea('');
     setShowSuccess(false);
+    setLatestSubmission(null);
+    setRoute(AppRoute.HUDDLE_WALL);
   };
 
-  const nextStep = () => setStep(s => Math.min(s + 1, 5));
+  const nextStep = () => setStep(s => Math.min(s + 1, 3));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
   const filteredEmployees = employees.filter(e => e.location === selectedLocation);
@@ -252,50 +249,33 @@ const App: React.FC = () => {
         );
       case 3:
         return (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-             <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="text-lzb w-5 h-5" />
-              <h2 className="text-xl font-black uppercase tracking-tight">Describe the Problem</h2>
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="space-y-4">
+               <div className="flex items-center gap-2">
+                <AlertTriangle className="text-lzb w-5 h-5" />
+                <h2 className="text-lg font-black uppercase tracking-tight">State the problem to be solved</h2>
+              </div>
+              <textarea
+                autoFocus
+                className="w-full h-32 p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-lzb/5 focus:border-lzb transition-all resize-none text-base font-medium"
+                placeholder="What is slowing us down or causing a safety risk?"
+                value={problem}
+                onChange={(e) => setProblem(e.target.value)}
+              />
             </div>
-            <textarea
-              autoFocus
-              className="w-full h-56 p-6 bg-slate-50 border-2 border-slate-200 rounded-3xl focus:ring-8 focus:ring-slate-100 focus:border-lzb transition-all resize-none text-lg font-medium"
-              placeholder="What specifically is causing friction or slowing us down?"
-              value={problem}
-              onChange={(e) => setProblem(e.target.value)}
-            />
-          </div>
-        );
-      case 4:
-        return (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-             <div className="flex items-center gap-2 mb-2">
-              <Target className="text-lzb w-5 h-5" />
-              <h2 className="text-xl font-black uppercase tracking-tight">What's the Impact?</h2>
+            
+            <div className="space-y-4">
+               <div className="flex items-center gap-2">
+                <Lightbulb className="text-lzb w-5 h-5" />
+                <h2 className="text-lg font-black uppercase tracking-tight">What's your idea to solve it?</h2>
+              </div>
+              <textarea
+                className="w-full h-32 p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-lzb/5 focus:border-lzb transition-all resize-none text-base font-medium"
+                placeholder="How can we fix this permanently?"
+                value={idea}
+                onChange={(e) => setIdea(e.target.value)}
+              />
             </div>
-            <textarea
-              autoFocus
-              className="w-full h-56 p-6 bg-slate-50 border-2 border-slate-200 rounded-3xl focus:ring-8 focus:ring-slate-100 focus:border-lzb transition-all resize-none text-lg font-medium"
-              placeholder="How would fixing this help the team or our customers?"
-              value={impact}
-              onChange={(e) => setImpact(e.target.value)}
-            />
-          </div>
-        );
-      case 5:
-        return (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="text-lzb w-5 h-5" />
-              <h2 className="text-xl font-black uppercase tracking-tight">Share Your Idea</h2>
-            </div>
-            <textarea
-              autoFocus
-              className="w-full h-56 p-6 bg-slate-50 border-2 border-slate-200 rounded-3xl focus:ring-8 focus:ring-slate-100 focus:border-lzb transition-all resize-none text-lg font-medium"
-              placeholder="What is your solution or improvement?"
-              value={idea}
-              onChange={(e) => setIdea(e.target.value)}
-            />
           </div>
         );
       default: return null;
@@ -329,11 +309,10 @@ const App: React.FC = () => {
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
               </div>
-              <p className="text-[9px] text-slate-400 mt-2 font-medium">Selecting a location will pre-configure the app for employees at that station.</p>
             </div>
           </div>
 
-          <div className="bg-white p-8 sm:p-12 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border-2 border-slate-100 relative overflow-hidden max-w-sm w-full print:border-lzb print:shadow-none print:max-w-none print:w-full print:h-[10in] print:p-16">
+          <div className="bg-white p-8 sm:p-12 rounded-[2.5rem] shadow-2xl border-2 border-slate-100 relative overflow-hidden max-w-sm w-full print:border-lzb print:shadow-none print:max-w-none print:w-full print:h-[10in] print:p-16">
             <div className="absolute top-0 left-0 w-full h-6 bg-lzb"></div>
             
             <div className="mb-10 flex flex-col items-center">
@@ -364,25 +343,11 @@ const App: React.FC = () => {
 
             <div className="mt-10 space-y-4">
               <p className="text-slate-900 font-bold text-lg print:text-3xl">Scan with your phone camera</p>
-              <div className="flex justify-center gap-6 print:mt-12">
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center print:w-12 print:h-12"><Zap className="w-4 h-4 text-lzb print:w-6 print:h-6" /></div>
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 print:text-sm">Instant</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center print:w-12 print:h-12"><UserCheck className="w-4 h-4 text-lzb print:w-6 print:h-6" /></div>
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 print:text-sm">Verified</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center print:w-12 print:h-12"><Sparkles className="w-4 h-4 text-lzb print:w-6 print:h-6" /></div>
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 print:text-sm">Continuous</span>
-                </div>
-              </div>
               <p className="mt-8 text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em] italic print:text-lg print:mt-24">"Empowering Every Team Member"</p>
             </div>
           </div>
 
-          <button onClick={() => window.print()} className="px-10 py-5 bg-lzb text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-all hover:scale-105 hover:bg-lzb/90 active:scale-95 no-print">
+          <button onClick={() => window.print()} className="px-10 py-5 bg-lzb text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95 no-print">
             <Printer className="w-5 h-5 text-white" /> Print Station Sign
           </button>
         </div>
@@ -392,13 +357,33 @@ const App: React.FC = () => {
     return (
       <div className="relative pt-4">
         {showSuccess ? (
-          <div className="fixed inset-0 bg-lzb z-50 flex flex-col items-center justify-center text-center p-8 animate-in zoom-in duration-500">
-            <div className="bg-white p-6 rounded-full shadow-[0_0_50px_rgba(255,255,255,0.2)] mb-6">
+          <div className="fixed inset-0 bg-lzb z-50 flex flex-col items-center justify-center text-center p-8 animate-in zoom-in duration-500 overflow-y-auto">
+            <div className="bg-white p-6 rounded-full shadow-2xl mb-6 no-print">
               <CheckCircle2 className="w-20 h-20 text-lzb" />
             </div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2">Submission Received</h2>
-            <p className="text-white/60 font-bold uppercase tracking-[0.2em] text-sm">Reviewing your Idea...</p>
-            <Loader2 className="w-10 h-10 text-white animate-spin mt-12" />
+            <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2 no-print">Success!</h2>
+            <p className="text-white/60 font-bold uppercase tracking-[0.2em] text-sm mb-8 no-print">Print your tag for the board</p>
+            
+            <div className="space-y-4 w-full max-w-xs no-print">
+               <button 
+                onClick={() => window.print()} 
+                className="w-full py-5 bg-white text-lzb rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95"
+               >
+                 <Tag className="w-6 h-6" /> Print 2x3 Tag
+               </button>
+               <button 
+                onClick={resetForm} 
+                className="w-full py-4 bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest border border-white/20 hover:bg-white/20 transition-all text-xs"
+               >
+                 Done, Back to Wall
+               </button>
+            </div>
+
+            {latestSubmission && (
+                <div className="hidden print:block absolute inset-0 bg-white">
+                    <KaizenCard submission={latestSubmission} printMode="thermal-2x3" />
+                </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
@@ -418,7 +403,7 @@ const App: React.FC = () => {
             )}
 
             <div className="flex gap-2 h-2 no-print">
-              {[1, 2, 3, 4, 5].map(s => (
+              {[1, 2, 3].map(s => (
                 <div key={s} className={`flex-1 rounded-full transition-all duration-700 ${step >= s ? 'bg-lzb shadow-lg' : 'bg-slate-200'}`} />
               ))}
             </div>
@@ -434,7 +419,7 @@ const App: React.FC = () => {
                 </button>
               )}
               
-              {step < 5 ? (
+              {step < 3 ? (
                 <button
                   disabled={(step === 1 && !selectedLocation) || (step === 2 && !selectedEmployee)}
                   onClick={nextStep}
@@ -448,7 +433,7 @@ const App: React.FC = () => {
                 </button>
               ) : (
                 <button
-                  disabled={!idea || isLoading}
+                  disabled={!problem || !idea || isLoading}
                   onClick={handleSubmit}
                   className="flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-lzb text-white shadow-2xl flex items-center justify-center gap-3 disabled:bg-slate-200 disabled:text-slate-400 disabled:opacity-50 active:scale-95 transition-all hover:bg-lzb/90"
                 >
