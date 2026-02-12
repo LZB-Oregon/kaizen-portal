@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import HuddleWall from './components/HuddleWall';
 import KaizenCard from './components/KaizenCard';
+import SetupGuide from './components/SetupGuide';
 import { AppRoute, KaizenSubmission, Employee } from './types';
-import { LOCATIONS, FALLBACK_EMPLOYEES, SHEET_CSV_URL, LOGO_URL, SUBMISSIONS_SCRIPT_URL, SUBMISSIONS_READ_URL } from './constants';
+import { LOCATIONS, FALLBACK_EMPLOYEES, SHEET_CSV_URL, LOGO_URL, SUBMISSIONS_SCRIPT_URL, SUBMISSIONS_READ_URL, POWER_AUTOMATE_WEBHOOK_URL } from './constants';
 import { analyzeKaizenIdea } from './services/geminiService';
 import { 
   ChevronRight, 
@@ -14,9 +15,6 @@ import {
   Loader2,
   AlertTriangle,
   UserCheck,
-  Target,
-  Sparkles,
-  Zap,
   MapPin,
   QrCode,
   Printer,
@@ -24,40 +22,6 @@ import {
   Tag,
   Lightbulb
 } from 'lucide-react';
-
-/* 
-  COPY & PASTE THIS INTO YOUR GOOGLE APPS SCRIPT (Extensions > Apps Script):
-  
-  function doPost(e) {
-    try {
-      var data = JSON.parse(e.postData.contents);
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var sheet = ss.getSheetByName("Submissions");
-      
-      // If sheet "Submissions" doesn't exist, create it or use first sheet
-      if (!sheet) {
-        sheet = ss.getSheets()[0];
-      }
-      
-      // Append data in order: ID, Time, Location, Name, EmpID, Problem, Idea, Waste, Analysis
-      sheet.appendRow([
-        data.id,
-        data.submittedAt,
-        data.location,
-        data.employeeName,
-        data.employeeId,
-        data.problem,
-        data.idea,
-        data.wasteType,
-        data.aiAnalysis
-      ]);
-      
-      return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
-    } catch (err) {
-      return ContentService.createTextOutput("Error: " + err.message).setMimeType(ContentService.MimeType.TEXT);
-    }
-  }
-*/
 
 const getDirectDriveUrl = (url: string) => {
   if (!url) return '';
@@ -77,6 +41,7 @@ const App: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [latestSubmission, setLatestSubmission] = useState<KaizenSubmission | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'pending' | 'success' | 'none'>('none');
 
   const [qrLocation, setQrLocation] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
@@ -84,12 +49,10 @@ const App: React.FC = () => {
   const [problem, setProblem] = useState('');
   const [idea, setIdea] = useState('');
 
-  // 1. Fetch Employees & Global Submissions
   useEffect(() => {
     const fetchData = async () => {
       let currentEmployees: Employee[] = FALLBACK_EMPLOYEES;
 
-      // Fetch Employees first
       if (SHEET_CSV_URL) {
         try {
           const response = await fetch(SHEET_CSV_URL);
@@ -115,7 +78,6 @@ const App: React.FC = () => {
         }
       }
 
-      // Fetch Global Submissions
       if (SUBMISSIONS_READ_URL) {
         try {
           const response = await fetch(SUBMISSIONS_READ_URL);
@@ -136,7 +98,7 @@ const App: React.FC = () => {
               idea: values[6],
               wasteType: values[7] as any,
               aiAnalysis: values[8],
-              employeePhoto: empProfile?.photoUrl || '', // Map photo from registry
+              employeePhoto: empProfile?.photoUrl || '',
               impact: 'Improvement project'
             };
           });
@@ -158,7 +120,6 @@ const App: React.FC = () => {
     fetchData();
   }, []);
 
-  // Handle URL Parameters
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const locParam = params.get('loc');
@@ -169,7 +130,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Auto-login logic
   useEffect(() => {
     const savedUser = localStorage.getItem('kaizen_user_id');
     const savedLocation = localStorage.getItem('kaizen_location');
@@ -214,6 +174,7 @@ const App: React.FC = () => {
     if (!selectedEmployee || !problem || !idea || !selectedLocation) return;
 
     setIsLoading(true);
+    setSyncStatus('pending');
     const analysis = await analyzeKaizenIdea(problem, idea);
 
     const newSubmission: KaizenSubmission = {
@@ -230,30 +191,43 @@ const App: React.FC = () => {
       submittedAt: new Date().toISOString()
     };
 
-    // 1. Post to Google Sheet Script
-    // NOTE: We use mode: 'no-cors' and OMIT the Content-Type header to bypass CORS preflight checks.
-    // Google Apps Script doesn't handle OPTIONS preflight, so sending it as plain text/simple request is required.
+    const syncPromises = [];
+
     if (SUBMISSIONS_SCRIPT_URL) {
-      console.log("Posting to script:", SUBMISSIONS_SCRIPT_URL);
-      try {
+      const payload = JSON.stringify(newSubmission);
+      const blob = new Blob([payload], { type: 'text/plain' });
+      syncPromises.push(
         fetch(SUBMISSIONS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
-          body: JSON.stringify(newSubmission)
-        })
-        .then(() => console.log("Post request sent to Apps Script."))
-        .catch(err => console.error("Sheet Sync Error:", err));
-      } catch (e) {
-        console.error("Sheet fetch exception", e);
-      }
-    } else {
-      console.warn("No SUBMISSIONS_SCRIPT_URL defined in constants.ts");
+          body: blob
+        }).catch(err => console.error("Google Sync Error:", err))
+      );
     }
 
-    // 2. Update Local State & Storage immediately (Optimistic UI)
+    if (POWER_AUTOMATE_WEBHOOK_URL) {
+      syncPromises.push(
+        fetch(POWER_AUTOMATE_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newSubmission)
+        })
+        .then(res => {
+          if (res.ok) setSyncStatus('success');
+          return res;
+        })
+        .catch(err => {
+          console.error("SharePoint Sync Error:", err);
+          setSyncStatus('none');
+        })
+      );
+    }
+
     setLatestSubmission(newSubmission);
     const updated = [newSubmission, ...submissions];
     saveSubmissions(updated);
+    
+    await Promise.allSettled(syncPromises);
     
     setIsLoading(false);
     setShowSuccess(true);
@@ -280,7 +254,7 @@ const App: React.FC = () => {
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex items-center gap-2 mb-2">
               <MapPin className="text-lzb w-5 h-5" />
-              <h2 className="text-xl font-black uppercase tracking-tight">Select Location</h2>
+              <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">Select Location</h2>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {LOCATIONS.map(loc => (loc &&
@@ -304,7 +278,7 @@ const App: React.FC = () => {
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-2 mb-2">
               <UserCheck className="text-lzb w-5 h-5" />
-              <h2 className="text-xl font-black uppercase tracking-tight">Select Your Profile</h2>
+              <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">Select Your Profile</h2>
             </div>
             <div className="grid grid-cols-1 gap-3 mt-4">
               {filteredEmployees.length > 0 ? filteredEmployees.map(emp => (
@@ -346,7 +320,7 @@ const App: React.FC = () => {
             <div className="space-y-4">
                <div className="flex items-center gap-2">
                 <AlertTriangle className="text-lzb w-5 h-5" />
-                <h2 className="text-lg font-black uppercase tracking-tight">State the problem to be solved</h2>
+                <h2 className="text-lg font-black uppercase tracking-tight text-slate-900">State the problem</h2>
               </div>
               <textarea
                 autoFocus
@@ -360,7 +334,7 @@ const App: React.FC = () => {
             <div className="space-y-4">
                <div className="flex items-center gap-2">
                 <Lightbulb className="text-lzb w-5 h-5" />
-                <h2 className="text-lg font-black uppercase tracking-tight">What's your idea to solve it?</h2>
+                <h2 className="text-lg font-black uppercase tracking-tight text-slate-900">What's your idea?</h2>
               </div>
               <textarea
                 className="w-full h-32 p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-lzb/5 focus:border-lzb transition-all resize-none text-base font-medium"
@@ -378,6 +352,10 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (route === AppRoute.HUDDLE_WALL) {
       return <HuddleWall submissions={submissions} />;
+    }
+
+    if (route === AppRoute.ADMIN_SETUP) {
+      return <SetupGuide />;
     }
 
     if (route === AppRoute.QR_GEN) {
@@ -447,97 +425,115 @@ const App: React.FC = () => {
       );
     }
 
-    return (
-      <div className="relative pt-4">
-        {showSuccess ? (
-          <div className="fixed inset-0 bg-lzb z-50 flex flex-col items-center justify-center text-center p-8 animate-in zoom-in duration-500 overflow-y-auto">
-            <div className="bg-white p-6 rounded-full shadow-2xl mb-6 no-print">
-              <CheckCircle2 className="w-20 h-20 text-lzb" />
-            </div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2 no-print">Success!</h2>
-            <p className="text-white/60 font-bold uppercase tracking-[0.2em] text-sm mb-8 no-print">Print your tag for the board</p>
-            
-            <div className="space-y-4 w-full max-w-xs no-print">
-               <button 
-                onClick={() => window.print()} 
-                className="w-full py-5 bg-white text-lzb rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95"
-               >
-                 <Tag className="w-6 h-6" /> Print 2x3 Tag
-               </button>
-               <button 
-                onClick={resetForm} 
-                className="w-full py-4 bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest border border-white/20 hover:bg-white/20 transition-all text-xs"
-               >
-                 Done, Back to Wall
-               </button>
-            </div>
-
-            {latestSubmission && (
-                <div className="hidden print:block absolute inset-0 bg-white">
-                    <KaizenCard submission={latestSubmission} printMode="thermal-2x3" />
+    if (route === AppRoute.SUBMIT) {
+        return (
+            <div className="relative pt-4">
+              {showSuccess ? (
+                <div className="fixed inset-0 bg-lzb z-50 flex flex-col items-center justify-center text-center p-8 animate-in zoom-in duration-500 overflow-y-auto">
+                  <div className="bg-white p-6 rounded-full shadow-2xl mb-6 no-print">
+                    <CheckCircle2 className="w-20 h-20 text-lzb" />
+                  </div>
+                  <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2 no-print">Success!</h2>
+                  <p className="text-white/60 font-bold uppercase tracking-[0.2em] text-sm mb-2 no-print">Print your tag for the board</p>
+                  
+                  {POWER_AUTOMATE_WEBHOOK_URL && (
+                      <div className="mb-8 no-print flex items-center gap-2 justify-center">
+                          {syncStatus === 'pending' ? (
+                              <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/40 animate-pulse">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Syncing with SharePoint...
+                              </div>
+                          ) : syncStatus === 'success' ? (
+                              <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-emerald-400">
+                                   <CheckCircle2 className="w-3 h-3" /> Enterprise Data Synced
+                              </div>
+                          ) : null}
+                      </div>
+                  )}
+      
+                  <div className="space-y-4 w-full max-w-xs no-print">
+                     <button 
+                      onClick={() => window.print()} 
+                      className="w-full py-5 bg-white text-lzb rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95"
+                     >
+                       <Tag className="w-6 h-6" /> Print 2x3 Tag
+                     </button>
+                     <button 
+                      onClick={resetForm} 
+                      className="w-full py-4 bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest border border-white/20 hover:bg-white/20 transition-all text-xs"
+                     >
+                       Done, Back to Wall
+                     </button>
+                  </div>
+      
+                  {latestSubmission && (
+                      <div className="hidden print:block absolute inset-0 bg-white">
+                          <KaizenCard submission={latestSubmission} printMode="thermal-2x3" />
+                      </div>
+                  )}
                 </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {selectedEmployee && step > 2 && (
-              <div className="flex items-center justify-between bg-lzb p-4 rounded-2xl border border-white/10 shadow-xl">
-                <div className="flex items-center gap-3">
-                  <img src={selectedEmployee.photoUrl} className="w-10 h-10 rounded-xl border-2 border-white/20 object-cover shadow-lg" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1454165833767-027ffea9e77b?w=100&h=100&fit=crop'; }} />
-                  <div>
-                    <span className="text-[10px] font-black text-white/50 uppercase tracking-widest block">{selectedLocation}</span>
-                    <span className="text-sm font-black text-white uppercase tracking-tight">{selectedEmployee.name}</span>
+              ) : (
+                <div className="space-y-6">
+                  {selectedEmployee && step > 2 && (
+                    <div className="flex items-center justify-between bg-lzb p-4 rounded-2xl border border-white/10 shadow-xl">
+                      <div className="flex items-center gap-3">
+                        <img src={selectedEmployee.photoUrl} className="w-10 h-10 rounded-xl border-2 border-white/20 object-cover shadow-lg" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1454165833767-027ffea9e77b?w=100&h=100&fit=crop'; }} />
+                        <div>
+                          <span className="text-[10px] font-black text-white/50 uppercase tracking-widest block">{selectedLocation}</span>
+                          <span className="text-sm font-black text-white uppercase tracking-tight">{selectedEmployee.name}</span>
+                        </div>
+                      </div>
+                      <button onClick={handleLogout} className="text-[9px] uppercase font-black text-white bg-white/10 px-3 py-2 rounded-xl border border-white/20 hover:bg-white/20 transition-colors">
+                        Reset
+                      </button>
+                    </div>
+                  )}
+      
+                  <div className="flex gap-2 h-2 no-print">
+                    {[1, 2, 3].map(s => (
+                      <div key={s} className={`flex-1 rounded-full transition-all duration-700 ${step >= s ? 'bg-lzb shadow-lg' : 'bg-slate-200'}`} />
+                    ))}
+                  </div>
+      
+                  <div className="min-h-[300px]">
+                    {renderStep()}
+                  </div>
+      
+                  <div className="flex gap-4 pt-8 no-print">
+                    {step > 1 && (
+                      <button onClick={prevStep} className="flex-1 py-5 px-6 bg-slate-100 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-200 transition-all">
+                        <ChevronLeft className="w-5 h-5" /> Back
+                      </button>
+                    )}
+                    
+                    {step < 3 ? (
+                      <button
+                        disabled={(step === 1 && !selectedLocation) || (step === 2 && !selectedEmployee)}
+                        onClick={nextStep}
+                        className={`flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all shadow-xl ${
+                          ((step === 1 && !selectedLocation) || (step === 2 && !selectedEmployee)) 
+                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' 
+                            : 'bg-lzb text-white active:scale-95 shadow-lzb/20 hover:bg-lzb/90'
+                        }`}
+                      >
+                        Continue <ChevronRight className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <button
+                        disabled={!problem || !idea || isLoading}
+                        onClick={handleSubmit}
+                        className="flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-lzb text-white shadow-2xl flex items-center justify-center gap-3 disabled:bg-slate-200 disabled:text-slate-400 disabled:opacity-50 active:scale-95 transition-all hover:bg-lzb/90"
+                      >
+                        {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Submit Idea <Send className="w-6 h-6" /></>}
+                      </button>
+                    )}
                   </div>
                 </div>
-                <button onClick={handleLogout} className="text-[9px] uppercase font-black text-white bg-white/10 px-3 py-2 rounded-xl border border-white/20 hover:bg-white/20 transition-colors">
-                  Reset
-                </button>
-              </div>
-            )}
-
-            <div className="flex gap-2 h-2 no-print">
-              {[1, 2, 3].map(s => (
-                <div key={s} className={`flex-1 rounded-full transition-all duration-700 ${step >= s ? 'bg-lzb shadow-lg' : 'bg-slate-200'}`} />
-              ))}
-            </div>
-
-            <div className="min-h-[300px]">
-              {renderStep()}
-            </div>
-
-            <div className="flex gap-4 pt-8 no-print">
-              {step > 1 && (
-                <button onClick={prevStep} className="flex-1 py-5 px-6 bg-slate-100 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-200 transition-all">
-                  <ChevronLeft className="w-5 h-5" /> Back
-                </button>
-              )}
-              
-              {step < 3 ? (
-                <button
-                  disabled={(step === 1 && !selectedLocation) || (step === 2 && !selectedEmployee)}
-                  onClick={nextStep}
-                  className={`flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all shadow-xl ${
-                    ((step === 1 && !selectedLocation) || (step === 2 && !selectedEmployee)) 
-                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' 
-                      : 'bg-lzb text-white active:scale-95 shadow-lzb/20 hover:bg-lzb/90'
-                  }`}
-                >
-                  Continue <ChevronRight className="w-5 h-5" />
-                </button>
-              ) : (
-                <button
-                  disabled={!problem || !idea || isLoading}
-                  onClick={handleSubmit}
-                  className="flex-[2] py-5 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-lzb text-white shadow-2xl flex items-center justify-center gap-3 disabled:bg-slate-200 disabled:text-slate-400 disabled:opacity-50 active:scale-95 transition-all hover:bg-lzb/90"
-                >
-                  {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Submit Idea <Send className="w-6 h-6" /></>}
-                </button>
               )}
             </div>
-          </div>
-        )}
-      </div>
-    );
+          );
+    }
+
+    return null;
   };
 
   return (
