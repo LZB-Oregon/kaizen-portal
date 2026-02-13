@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { POWER_AUTOMATE_WEBHOOK_URL, LOGO_URL, SHEET_CSV_URL } from '../constants';
 import { 
@@ -14,7 +13,9 @@ import {
   MousePointer2,
   Zap,
   AlertCircle,
-  Link2
+  Link2,
+  // Fix: Added missing icon import for ArrowRight
+  ArrowRight
 } from 'lucide-react';
 
 const SetupGuide: React.FC = () => {
