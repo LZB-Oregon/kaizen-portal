@@ -241,7 +241,7 @@ const SetupGuide: React.FC = () => {
               </p>
               <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                 <p className="text-xs leading-relaxed italic">
-                  Create a New View &gt; Name it "Eugene Team" &gt; Add Filter &gt; <strong>Location is equal to Eugene</strong>.
+                  Create a New View {" > "} Name it "Eugene Team" {" > "} Add Filter {" > "} <strong>Location is equal to Eugene</strong>.
                 </p>
               </div>
            </div>
