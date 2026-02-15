@@ -71,18 +71,17 @@ const SetupGuide: React.FC = () => {
   };
 
   // Basic Health Checks
-  // Improved checks to handle more variations of Google Drive links and direct image hosts
+  // Improved checks to handle more variations of Google Drive links
   const isLogoShared = 
-    LOGO_URL.toLowerCase().includes('uc?') || 
-    LOGO_URL.toLowerCase().includes('id=') || 
-    LOGO_URL.toLowerCase().includes('export=view') || 
-    LOGO_URL.toLowerCase().includes('drive.google.com/thumbnail') || 
-    LOGO_URL.toLowerCase().includes('lh3.googleusercontent.com') ||
+    LOGO_URL.toLowerCase().includes('drive.google.com') || 
+    LOGO_URL.toLowerCase().includes('googleusercontent.com') ||
     LOGO_URL.startsWith('data:image');
 
   const isSheetExport = 
     SHEET_CSV_URL.toLowerCase().includes('output=csv') || 
     SHEET_CSV_URL.toLowerCase().includes('export?format=csv');
+
+  const isWebhookSet = POWER_AUTOMATE_WEBHOOK_URL && POWER_AUTOMATE_WEBHOOK_URL.length > 20;
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
@@ -108,11 +107,12 @@ const SetupGuide: React.FC = () => {
                     <p className="text-xs font-black uppercase mb-1">Logo Connection</p>
                     <p className="text-[11px] leading-relaxed">
                         {isLogoShared 
-                            ? "Your logo link is correctly formatted for direct display." 
-                            : "Admin Tip: Ensure your logo in Google Drive is shared with 'Anyone with the link' and uses the direct download format (uc?id=...)."}
+                            ? "Your logo link is correctly detected. Our system will handle the Drive conversion automatically." 
+                            : "Admin Tip: Ensure your logo in Google Drive is shared with 'Anyone with the link' or it won't appear in the header."}
                     </p>
                 </div>
             </div>
+            
             <div className={`p-4 rounded-2xl border flex items-start gap-4 ${isSheetExport ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800'}`}>
                 {isSheetExport ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <Link2 className="w-5 h-5 shrink-0" />}
                 <div>
@@ -121,6 +121,18 @@ const SetupGuide: React.FC = () => {
                         {isSheetExport 
                             ? "Employee data list is successfully connected via CSV export." 
                             : "Admin Warning: Your SHEET_CSV_URL looks like a standard sharing link. You must go to File > Share > Publish to Web, select 'CSV', and use that link."}
+                    </p>
+                </div>
+            </div>
+
+            <div className={`p-4 rounded-2xl border flex items-start gap-4 ${isWebhookSet ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                {isWebhookSet ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <Workflow className="w-5 h-5 shrink-0" />}
+                <div>
+                    <p className="text-xs font-black uppercase mb-1">Power Automate Webhook</p>
+                    <p className="text-[11px] leading-relaxed">
+                        {isWebhookSet 
+                            ? "Webhook URL is configured and ready for production testing." 
+                            : "Cloud sync is disabled. Submissions will be stored locally on devices only."}
                     </p>
                 </div>
             </div>
@@ -200,7 +212,7 @@ const SetupGuide: React.FC = () => {
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Step 4: Live Test</p>
                 <button 
                     onClick={handleTestPing}
-                    disabled={testLoading || !POWER_AUTOMATE_WEBHOOK_URL}
+                    disabled={testLoading || !isWebhookSet}
                     className="px-10 py-4 bg-lzb text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale flex items-center gap-3 mx-auto"
                 >
                     {testLoading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Send className="w-4 h-4" />}
@@ -229,7 +241,7 @@ const SetupGuide: React.FC = () => {
               </p>
               <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                 <p className="text-xs leading-relaxed italic">
-                  Create a New View &gt; Name it "Eugene Team" &gt; Add Filter &gt; <strong>Location is equal to Eugene</strong>.
+                  Create a New View {" > "} Name it "Eugene Team" {" > "} Add Filter {" > "} <strong>Location is equal to Eugene</strong>.
                 </p>
               </div>
            </div>
