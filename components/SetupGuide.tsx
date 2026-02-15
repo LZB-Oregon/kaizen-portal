@@ -15,7 +15,8 @@ import {
   Zap,
   AlertCircle,
   Link2,
-  ArrowRight
+  ArrowRight,
+  ChevronRight
 } from 'lucide-react';
 
 const SetupGuide: React.FC = () => {
@@ -71,7 +72,6 @@ const SetupGuide: React.FC = () => {
   };
 
   // Basic Health Checks
-  // Improved checks to handle more variations of Google Drive links
   const isLogoShared = 
     LOGO_URL.toLowerCase().includes('drive.google.com') || 
     LOGO_URL.toLowerCase().includes('googleusercontent.com') ||
@@ -237,12 +237,16 @@ const SetupGuide: React.FC = () => {
            <div className="space-y-2">
               <p className="text-xs font-black uppercase text-lzb bg-white inline-block px-2 py-0.5 rounded tracking-widest">Site Segregation</p>
               <p className="text-sm leading-relaxed opacity-80">
-                To separate data for managers (e.g., only Eugene ideas), go to your SharePoint list and:
+                To separate data for managers (e.g., only Eugene ideas), go to your SharePoint list and follow this path:
               </p>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <p className="text-xs leading-relaxed italic">
-                  Create a New View &gt; Name it "Eugene Team" &gt; Add Filter &gt; <strong>Location is equal to Eugene</strong>.
-                </p>
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-wrap items-center gap-2 text-xs italic">
+                 <span className="font-bold">Create a New View</span>
+                 <ChevronRight className="w-3 h-3 text-slate-500" />
+                 <span className="font-bold">Name it "Eugene Team"</span>
+                 <ChevronRight className="w-3 h-3 text-slate-500" />
+                 <span className="font-bold">Add Filter</span>
+                 <ChevronRight className="w-3 h-3 text-slate-500" />
+                 <span className="px-2 py-1 bg-lzb text-white rounded not-italic font-bold">Location is equal to Eugene</span>
               </div>
            </div>
         </div>
