@@ -5,7 +5,7 @@ import HuddleWall from './components/HuddleWall';
 import KaizenCard from './components/KaizenCard';
 import SetupGuide from './components/SetupGuide';
 import { AppRoute, KaizenSubmission, Employee } from './types';
-import { LOCATIONS, FALLBACK_EMPLOYEES, SHEET_CSV_URL, LOGO_URL, SUBMISSIONS_SCRIPT_URL, SUBMISSIONS_READ_URL, POWER_AUTOMATE_WEBHOOK_URL } from './constants';
+import { LOCATIONS, FALLBACK_EMPLOYEES, SHEET_CSV_URL, LOGO_URL, SUBMISSIONS_SCRIPT_URL, SUBMISSIONS_READ_URL } from './constants';
 import { analyzeKaizenIdea } from './services/geminiService';
 import { 
   ChevronRight, 
@@ -41,7 +41,6 @@ const App: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [latestSubmission, setLatestSubmission] = useState<KaizenSubmission | null>(null);
-  const [syncStatus, setSyncStatus] = useState<'pending' | 'success' | 'none'>('none');
 
   const [qrLocation, setQrLocation] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
@@ -174,7 +173,6 @@ const App: React.FC = () => {
     if (!selectedEmployee || !problem || !idea || !selectedLocation) return;
 
     setIsLoading(true);
-    setSyncStatus('pending');
     const analysis = await analyzeKaizenIdea(problem, idea);
 
     const newSubmission: KaizenSubmission = {
@@ -191,43 +189,23 @@ const App: React.FC = () => {
       submittedAt: new Date().toISOString()
     };
 
-    const syncPromises = [];
-
     if (SUBMISSIONS_SCRIPT_URL) {
       const payload = JSON.stringify(newSubmission);
       const blob = new Blob([payload], { type: 'text/plain' });
-      syncPromises.push(
-        fetch(SUBMISSIONS_SCRIPT_URL, {
+      try {
+        await fetch(SUBMISSIONS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
           body: blob
-        }).catch(err => console.error("Google Sync Error:", err))
-      );
-    }
-
-    if (POWER_AUTOMATE_WEBHOOK_URL) {
-      syncPromises.push(
-        fetch(POWER_AUTOMATE_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newSubmission)
-        })
-        .then(res => {
-          if (res.ok) setSyncStatus('success');
-          return res;
-        })
-        .catch(err => {
-          console.error("SharePoint Sync Error:", err);
-          setSyncStatus('none');
-        })
-      );
+        });
+      } catch (err) {
+        console.error("Google Sync Error:", err);
+      }
     }
 
     setLatestSubmission(newSubmission);
     const updated = [newSubmission, ...submissions];
     saveSubmissions(updated);
-    
-    await Promise.allSettled(syncPromises);
     
     setIsLoading(false);
     setShowSuccess(true);
@@ -431,29 +409,15 @@ const App: React.FC = () => {
                 <div className="bg-white p-6 rounded-full shadow-2xl mb-6 no-print">
                   <CheckCircle2 className="w-20 h-20 text-lzb" />
                 </div>
-                <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2 no-print">Success!</h2>
-                <p className="text-white/60 font-bold uppercase tracking-[0.2em] text-sm mb-2 no-print">Print your tag for the board</p>
+                <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2 no-print">Idea Recorded</h2>
+                <p className="text-white/60 font-bold uppercase tracking-[0.2em] text-sm mb-12 no-print">Continuous Improvement in Action</p>
                 
-                {POWER_AUTOMATE_WEBHOOK_URL && (
-                    <div className="mb-8 no-print flex items-center gap-2 justify-center">
-                        {syncStatus === 'pending' ? (
-                            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/40 animate-pulse">
-                                <Loader2 className="w-3 h-3 animate-spin" /> Syncing with SharePoint...
-                            </div>
-                        ) : syncStatus === 'success' ? (
-                            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-emerald-400">
-                                 <CheckCircle2 className="w-3 h-3" /> Enterprise Data Synced
-                            </div>
-                        ) : null}
-                    </div>
-                )}
-    
                 <div className="space-y-4 w-full max-w-xs no-print">
                    <button 
                     onClick={() => window.print()} 
                     className="w-full py-5 bg-white text-lzb rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95"
                    >
-                     <Tag className="w-6 h-6" /> Print 2x3 Tag
+                     <Tag className="w-6 h-6" /> Print Kaizen Tag
                    </button>
                    <button 
                     onClick={resetForm} 
