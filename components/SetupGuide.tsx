@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { POWER_AUTOMATE_WEBHOOK_URL, LOGO_URL, SHEET_CSV_URL } from '../constants';
 import { 
@@ -70,8 +71,17 @@ const SetupGuide: React.FC = () => {
   };
 
   // Basic Health Checks
-  const isLogoShared = LOGO_URL.includes('uc?id=') || LOGO_URL.includes('uc?export=view');
-  const isSheetExport = SHEET_CSV_URL.includes('output=csv');
+  // Improved checks to handle more variations of Google Drive links and direct image hosts
+  const isLogoShared = 
+    LOGO_URL.toLowerCase().includes('uc?') || 
+    LOGO_URL.toLowerCase().includes('export=view') || 
+    LOGO_URL.toLowerCase().includes('drive.google.com/thumbnail') || 
+    LOGO_URL.toLowerCase().includes('lh3.googleusercontent.com') ||
+    LOGO_URL.startsWith('data:image');
+
+  const isSheetExport = 
+    SHEET_CSV_URL.toLowerCase().includes('output=csv') || 
+    SHEET_CSV_URL.toLowerCase().includes('export?format=csv');
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
@@ -98,7 +108,7 @@ const SetupGuide: React.FC = () => {
                     <p className="text-[11px] leading-relaxed">
                         {isLogoShared 
                             ? "Your logo link is correctly formatted for direct display." 
-                            : "Admin Tip: Ensure your logo in Google Drive is shared with 'Anyone with the link' and uses the direct download format."}
+                            : "Admin Tip: Ensure your logo in Google Drive is shared with 'Anyone with the link' and uses the direct download format (uc?id=...)."}
                     </p>
                 </div>
             </div>
@@ -109,7 +119,7 @@ const SetupGuide: React.FC = () => {
                     <p className="text-[11px] leading-relaxed">
                         {isSheetExport 
                             ? "Employee data list is successfully connected via CSV export." 
-                            : "Admin Warning: Your SHEET_CSV_URL looks like a standard link. You must 'Publish to Web' as a CSV for the team list to load."}
+                            : "Admin Warning: Your SHEET_CSV_URL looks like a standard sharing link. You must go to File > Share > Publish to Web, select 'CSV', and use that link."}
                     </p>
                 </div>
             </div>
