@@ -5,14 +5,12 @@ import {
   Copy, 
   CheckCircle2, 
   Database, 
-  Terminal, 
   Send, 
   Zap,
   AlertCircle,
   Link2,
   ChevronRight,
-  FileSpreadsheet,
-  Code
+  FileSpreadsheet
 } from 'lucide-react';
 
 const SetupGuide: React.FC = () => {
@@ -23,7 +21,6 @@ const SetupGuide: React.FC = () => {
   const appsScriptCode = `function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = JSON.parse(e.postData.contents);
-  
   sheet.appendRow([
     data.id,
     data.submittedAt,
@@ -35,7 +32,6 @@ const SetupGuide: React.FC = () => {
     data.wasteType,
     data.aiAnalysis
   ]);
-  
   return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
 }`;
 
@@ -73,21 +69,12 @@ const SetupGuide: React.FC = () => {
     }
   };
 
-  // Basic Health Checks
-  const isLogoShared = 
-    LOGO_URL.toLowerCase().includes('drive.google.com') || 
-    LOGO_URL.toLowerCase().includes('googleusercontent.com') ||
-    LOGO_URL.startsWith('data:image');
-
-  const isSheetExport = 
-    SHEET_CSV_URL.toLowerCase().includes('output=csv') || 
-    SHEET_CSV_URL.toLowerCase().includes('pub?');
-
+  const isLogoShared = LOGO_URL.toLowerCase().includes('drive.google.com') || LOGO_URL.toLowerCase().includes('googleusercontent.com') || LOGO_URL.startsWith('data:image');
+  const isSheetExport = SHEET_CSV_URL.toLowerCase().includes('output=csv') || SHEET_CSV_URL.toLowerCase().includes('pub?');
   const isScriptSet = SUBMISSIONS_SCRIPT_URL && SUBMISSIONS_SCRIPT_URL.length > 20;
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
-      {/* Header */}
       <div className="bg-lzb p-10 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
         <div className="relative z-10">
@@ -96,7 +83,6 @@ const SetupGuide: React.FC = () => {
         </div>
       </div>
 
-      {/* System Health Section */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
             <Zap className="text-lzb w-5 h-5" />
@@ -106,42 +92,21 @@ const SetupGuide: React.FC = () => {
             <div className={`p-4 rounded-2xl border flex items-start gap-4 ${isLogoShared ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-amber-50 border-amber-100 text-amber-800'}`}>
                 {isLogoShared ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
                 <div>
-                    <p className="text-xs font-black uppercase mb-1">Branding (Logo)</p>
-                    <p className="text-[11px] leading-relaxed">
-                        {isLogoShared 
-                            ? "Connected. Logo is visible in the application header." 
-                            : "Tip: Share your Drive logo as 'Anyone with the link' to make it visible."}
-                    </p>
+                    <p className="text-xs font-black uppercase mb-1">Branding</p>
+                    <p className="text-[11px] leading-relaxed">System logo connection status.</p>
                 </div>
             </div>
             
             <div className={`p-4 rounded-2xl border flex items-start gap-4 ${isSheetExport ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800'}`}>
                 {isSheetExport ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <Link2 className="w-5 h-5 shrink-0" />}
                 <div>
-                    <p className="text-xs font-black uppercase mb-1">Employee List Sync</p>
-                    <p className="text-[11px] leading-relaxed">
-                        {isSheetExport 
-                            ? "Verified. Employee personnel data is syncing correctly." 
-                            : "Action Required: Use File > Share > Publish to Web (CSV) and update constants.ts."}
-                    </p>
-                </div>
-            </div>
-
-            <div className={`p-4 rounded-2xl border flex items-start gap-4 ${isScriptSet ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                {isScriptSet ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <Database className="w-5 h-5 shrink-0" />}
-                <div>
-                    <p className="text-xs font-black uppercase mb-1">Data Storage Bridge</p>
-                    <p className="text-[11px] leading-relaxed">
-                        {isScriptSet 
-                            ? "Active. Ideas are being recorded to your Google Sheet." 
-                            : "Bridge Offline. Ideas are currently stored locally on device only."}
-                    </p>
+                    <p className="text-xs font-black uppercase mb-1">Personnel Sync</p>
+                    <p className="text-[11px] leading-relaxed">Employee directory connection status.</p>
                 </div>
             </div>
         </div>
       </section>
 
-      {/* Sheets Bridge Instructions */}
       <section className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-lzb flex items-center justify-center text-white shadow-lg">
@@ -149,7 +114,7 @@ const SetupGuide: React.FC = () => {
           </div>
           <div>
             <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Google Sheets Bridge</h3>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Enable Cloud Storage</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cloud Integration</p>
           </div>
         </div>
 
@@ -160,16 +125,13 @@ const SetupGuide: React.FC = () => {
                <p className="text-sm font-bold text-slate-800">Copy Apps Script</p>
              </div>
              <div className="pl-9 space-y-3">
-                <p className="text-xs text-slate-500">In your Google Sheet, open <span className="font-bold">Extensions</span>, then <span className="font-bold">Apps Script</span> and paste this code:</p>
+                <p className="text-xs text-slate-500">Paste code into Sheet Apps Script editor:</p>
                 <div className="bg-slate-900 rounded-2xl p-4 overflow-hidden relative group">
-                   <button 
-                    onClick={handleCopy}
-                    className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all text-white text-[9px] font-black uppercase tracking-widest border border-white/10"
-                   >
+                   <button onClick={handleCopy} className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all text-white text-[9px] font-black uppercase border border-white/10">
                     {copied ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                    {copied ? 'Copied' : 'Copy Code'}
+                    {copied ? 'Copied' : 'Copy'}
                    </button>
-                   <pre className="text-[9px] text-emerald-300 font-mono overflow-x-auto whitespace-pre p-2 bg-black/30 rounded-lg max-h-40 scrollbar-hide">
+                   <pre className="text-[9px] text-emerald-300 font-mono overflow-x-auto p-2 bg-black/30 rounded-lg max-h-40">
                       {appsScriptCode}
                    </pre>
                 </div>
@@ -179,35 +141,25 @@ const SetupGuide: React.FC = () => {
           <div className="space-y-3">
              <div className="flex items-center gap-3">
                <div className="w-6 h-6 rounded-full bg-lzb text-white text-[10px] flex items-center justify-center font-black">2</div>
-               <p className="text-sm font-bold text-slate-800">Deploy as Web App</p>
+               <p className="text-sm font-bold text-slate-800">Deploy Settings</p>
              </div>
              <div className="pl-9 space-y-4">
-                <p className="text-xs text-slate-500 leading-relaxed">Click <span className="font-bold">Deploy</span>, then <span className="font-bold">New Deployment</span>. Follow this path exactly:</p>
                 <div className="flex flex-wrap items-center gap-2 text-[10px] italic bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <span className="font-bold">Select Type: Web App</span>
+                    <span className="font-bold">Web App</span>
                     <ChevronRight className="w-3 h-3 text-slate-400" />
-                    <span className="font-bold">Execute As: Me</span>
+                    <span className="font-bold">Execute: Me</span>
                     <ChevronRight className="w-3 h-3 text-slate-400" />
-                    <span className="font-bold">Who has access: Anyone</span>
+                    <span className="font-bold">Access: Anyone</span>
                 </div>
-                <p className="text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg border border-amber-100">IMPORTANT: Copy the "Web App URL" provided after deployment and paste it into constants.ts as SUBMISSIONS_SCRIPT_URL.</p>
              </div>
           </div>
 
-          <div className="pt-6 border-t border-slate-100">
-             <div className="bg-slate-50 p-6 rounded-3xl text-center space-y-4">
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Step 3: Verify Connection</p>
-                <button 
-                    onClick={handleTestPing}
-                    disabled={testLoading || !isScriptSet}
-                    className="px-10 py-4 bg-lzb text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale flex items-center gap-3 mx-auto"
-                >
-                    {testLoading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Send className="w-4 h-4" />}
-                    Send Test Idea to Sheet
-                </button>
-                {testResult === 'success' && <p className="text-[10px] text-emerald-600 font-bold animate-bounce">✓ Success! Test row added to sheet.</p>}
-                {testResult === 'error' && <p className="text-[10px] text-rose-600 font-bold">✗ Error! Verify your Deployment URL and Script settings.</p>}
-             </div>
+          <div className="pt-6 border-t border-slate-100 text-center space-y-4">
+             <button onClick={handleTestPing} disabled={testLoading || !isScriptSet} className="px-10 py-4 bg-lzb text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl flex items-center gap-3 mx-auto">
+                {testLoading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Send className="w-4 h-4" />}
+                Verify Bridge
+             </button>
+             {testResult === 'success' && <p className="text-[10px] text-emerald-600 font-bold">Bridge Verified</p>}
           </div>
         </div>
       </section>
