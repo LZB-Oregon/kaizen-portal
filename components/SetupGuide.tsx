@@ -74,6 +74,7 @@ const SetupGuide: React.FC = () => {
   // Improved checks to handle more variations of Google Drive links and direct image hosts
   const isLogoShared = 
     LOGO_URL.toLowerCase().includes('uc?') || 
+    LOGO_URL.toLowerCase().includes('id=') || 
     LOGO_URL.toLowerCase().includes('export=view') || 
     LOGO_URL.toLowerCase().includes('drive.google.com/thumbnail') || 
     LOGO_URL.toLowerCase().includes('lh3.googleusercontent.com') ||
@@ -228,7 +229,7 @@ const SetupGuide: React.FC = () => {
               </p>
               <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                 <p className="text-xs leading-relaxed italic">
-                  Create a New View &gt; Name it "Eugene Team" &gt; Add Filter &gt; <strong>Location is equal to Eugene</strong>.
+                  Create a New View {" > "} Name it "Eugene Team" {" > "} Add Filter {" > "} <strong>Location is equal to Eugene</strong>.
                 </p>
               </div>
            </div>
